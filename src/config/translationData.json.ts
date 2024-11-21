@@ -63,7 +63,7 @@ export const textTranslations = {
   },
   fr: {
     hero_description:
-      "Je ne parle pas vraiment français donc j'utilise Google Translate pour quelques parties de cette démo.",
+      "teste ne parle pas vraiment français donc j'utilise Google Translate pour quelques parties de cette démo.",
     back_to_all_posts: "Retour à tous les articles",
     updated: "Mis à jour",
   },
