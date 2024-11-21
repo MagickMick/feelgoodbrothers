@@ -1,0 +1,57 @@
+---
+// main layout
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+// components
+import ContactForm from "@components/ContactForm/ContactForm.astro";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { getTranslatedData } from "@js/translationUtils";
+
+// data
+const currLocale = getLocaleFromUrl(Astro.url);
+const siteData = getTranslatedData("siteData", currLocale);
+---
+
+<BaseLayout
+  title="Contact Me"
+  description="Get in touch! Contact information for Blogsmith."
+>
+  <div class="site-container mx-auto pt-36 md:pt-44">
+    <h1 class="h1 text-center">Contact Us</h1>
+    <p class="description mx-auto mt-6 max-w-2xl text-center">
+      When you fill out the form below, we will contact you to set up a time and
+      take a look at your painting project. We look forward to meeting you!
+    </p>
+    <div class="mt-20 grid gap-8 lg:grid-cols-3">
+      <!-- Contact info -->
+      <div class="hidden flex-col lg:flex">
+        <!-- gap to align with h2 of contact form -->
+        <div class="h2 opacity-0">-</div>
+
+        <!-- contact info pulled from siteData.json -->
+        <h3 class="mb-2 mt-4 text-lg font-medium">Location & Contact</h3>
+        <p>{siteData.contact.address1}</p>
+        <p>{siteData.contact.address2}</p>
+        <p>
+          Ph: <a
+            href={`tel:${siteData.contact.phone}`}
+            class="transition hover:text-primary-500 hover:underline"
+            >{siteData.contact.phone}</a
+          >
+        </p>
+        <a
+          href="mailto:example@email.com"
+          class="transition hover:text-primary-500 hover:underline"
+          >{siteData.contact.email}</a
+        >
+      </div>
+
+      <!-- contact form -->
+      <div class="lg:col-span-2">
+        <ContactForm />
+      </div>
+    </div>
+  </div>
+</BaseLayout>

@@ -1,0 +1,71 @@
+---
+/**
+ * * These are alternating side cards with titles, check-marked list items, and images
+ */
+
+import { Image } from "astro:assets";
+import { Icon } from "astro-icon";
+
+// components
+import Button from "@components/Button/Button.astro";
+
+interface Props {
+  title: string; // larger title
+  items: string[]; // list of items that will have check marks next to
+  href: string; // link to learn more
+  image: ImageMetadata; // an imported image
+  imageSide: "left" | "right";
+  idx: number; // determines which "stellar/blob" icon svg to use. There are 4 options (0-3)
+  rest?: any; // catch-all for any additional parameters, such as "aria-label"
+}
+
+const { image, title, items, href, idx, imageSide, ...rest } =
+  Astro.props as Props;
+---
+
+<div
+  class="mx-auto grid gap-8 rounded-xl md:grid-cols-2 md:gap-12 lg:gap-20"
+  {...rest}
+>
+  <!-- text -->
+  <div class=`${imageSide === "left" ? "md:order-last": ""} col-span-1`>
+    <h2 class="h2 mt-6">{title}</h2>
+    <ul class="mt-6">
+      {
+        items.map((item) => (
+          <li class="mt-4 flex items-center opacity-80">
+            <Icon
+              name="tabler/check"
+              class="mr-2 h-5 w-5 text-primary-500"
+              aria-hidden="true"
+            />
+            <span>{item}</span>
+          </li>
+        ))
+      }
+    </ul>
+    <div class="z-20 mt-8 flex">
+      <Button variant="ghost" href="/contact/" arrow="right">
+        Get a free quote
+      </Button>
+    </div>
+  </div>
+
+  <!-- image -->
+  <div class="relative mx-auto max-w-4xl">
+    <!-- background blob -->
+    <div class="absolute left-0 top-0 -z-10 h-full w-full">
+      <Icon
+        name={`stellar/blob-${idx % 4}`}
+        class="absolute left-0 top-0 h-auto w-[220%] -translate-x-1/4 -translate-y-[21%] text-primary-100 md:-translate-x-1/3"
+        aria-hidden="true"
+      />
+    </div>
+    <Image
+      class="relative rounded-xl border border-transparent object-cover"
+      src={image}
+      alt={title}
+      height={700}
+    />
+  </div>
+</div>

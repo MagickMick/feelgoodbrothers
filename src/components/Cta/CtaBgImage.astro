@@ -1,0 +1,87 @@
+---
+/**
+ * * CTA with title, text, button, and cards on the side
+ *
+ * ! If you can an error for an icon like "Error: Not Found: "calendar-check" in pack "tabler",
+ * ! You can copy to actual SVG into src/icons and name it however and use similar to below
+ */
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { Icon } from "astro-icon";
+import { Image } from "astro:assets";
+
+// components
+import Button from "@components/Button/Button.astro";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+
+const currLocale = getLocaleFromUrl(Astro.url);
+
+import image from "@assets/images/happy-family-crop2.png";
+---
+
+<section id="cta" class="relative my-20 text-base-100">
+  <div class="relative">
+    <!-- background image -->
+    <div class="absolute -z-20 h-full w-full bg-base-900">
+      <div class="relative mx-auto h-full max-w-[2000px]">
+        <Image
+          src={image}
+          class="mx-auto h-full w-auto object-cover opacity-30"
+          alt="smiling family"
+          aria-hidden="true"
+          loading="lazy"
+          height={2000}
+        />
+
+        <!-- <div class="relative h-full w-full"> -->
+        <!-- left fade-out -->
+        <div
+          class="absolute -left-px top-0 z-10 h-full w-[10%] bg-gradient-to-r from-base-900 from-10% to-transparent"
+        >
+        </div>
+        <!-- right fade-out -->
+        <div
+          class="absolute -right-px top-0 z-10 h-full w-[10%] bg-gradient-to-r from-transparent to-base-900 to-90%"
+        >
+        </div>
+        <!-- </div> -->
+      </div>
+    </div>
+
+    <div class="site-container relative py-32">
+      <!-- center card -->
+      <div class="relative z-10 flex p-1">
+        <div class="rounded-xl px-4 py-20">
+          <div class="mx-auto max-w-2xl">
+            <h2 class="h1">
+              What are <span class="relative whitespace-nowrap">
+                you
+                <span>
+                  <Icon
+                    name="stellar/freehand-zig-underline"
+                    class="absolute left-0 top-0 -z-10 h-full w-full translate-y-1/2 text-primary-400"
+                    aria-hidden="true"
+                  />
+                </span>
+              </span>
+              waiting for?
+            </h2>
+            <p class="description mt-6">
+              Schedule your free quote today and turn your vision into reality.
+            </p>
+            <div class="mt-10 flex text-base-900">
+              <Button
+                variant="primary"
+                href={getRelativeLocaleUrl(currLocale, "/contact")}
+                arrow="right"
+              >
+                Schedule a free estimate
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

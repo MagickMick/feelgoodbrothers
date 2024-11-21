@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<!-- strokes all set to `stroke:currentColor;` so color is inherited from the text color -->
+
+<svg width="38.158127mm" height="14.074949mm" viewBox="0 0 38.158127 14.074949" version="1.1" id="svg1"
+  xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+  <defs id="defs1" />
+  <g id="layer1" transform="translate(-86.19314,-104.47234)">
+    <path
+      style="fill:none;fill-rule:evenodd;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+      d="m 87.193137,112.81071 c 4.714345,-1.02292 9.428693,-2.04585 15.455123,-2.10143 6.02643,-0.0556 13.36465,0.85613 20.70301,1.76787"
+      id="path12" />
+    <path
+      style="fill:none;fill-rule:evenodd;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+      d="m 123.35127,112.47715 c -0.93397,-0.77831 -1.86795,-1.55663 -2.97983,-2.7241 -1.11188,-1.16748 -2.40164,-2.72408 -3.69142,-4.28071"
+      id="path13" />
+    <path
+      style="fill:none;fill-rule:evenodd;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+      d="m 123.35127,112.47715 c -1.13411,0.5337 -2.26822,1.0674 -3.55801,1.91244 -1.2898,0.84504 -2.73519,2.00135 -4.18063,3.1577"
+      id="path14" />
+  </g>
+</svg>

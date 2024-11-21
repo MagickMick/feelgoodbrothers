@@ -1,0 +1,64 @@
+---
+/**
+ * * FAQ section columns (not accordions)
+ */
+import { Icon } from "astro-icon";
+
+// components
+import FaqCard from "./FaqCard.astro";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { getTranslatedData } from "@js/translationUtils";
+
+// data
+import { type FaqItem } from "@config/types/configDataTypes";
+const currLocale = getLocaleFromUrl(Astro.url);
+const faqData = getTranslatedData("faqData", currLocale);
+
+type FaqCols = FaqItem[];
+
+// array of columns for faq data
+const faqCols: FaqCols[] = [];
+let faqsPerCol = Math.floor(faqData.length / 2);
+let remainder = faqData.length % 2;
+
+// this assumes more than 2 items for FAQ...
+if (remainder === 0) {
+  // even split
+  faqCols[0] = faqData.slice(0, faqsPerCol);
+  faqCols[1] = faqData.slice(faqsPerCol, 2 * faqsPerCol);
+} else if (remainder === 1) {
+  // extra goes to first column
+  faqCols[0] = faqData.slice(0, faqsPerCol + 1);
+  faqCols[1] = faqData.slice(faqsPerCol + 1, 2 * faqsPerCol + 1);
+} else {
+  console.error("Something went wrong with the FAQ data in Faq2.astro");
+}
+---
+
+<section id="faq2" class="site-container my-24 md:my-36">
+  <h2 class="h2 mt-8 text-center">
+    <span class="relative whitespace-nowrap">
+      FAQ
+      <span>
+        <Icon
+          name="stellar/freehand-zig-underline"
+          class="absolute left-0 top-0 -z-10 h-full w-full translate-y-1/2 text-primary-500"
+          aria-hidden="true"
+        />
+      </span>
+    </span>
+  </h2>
+  <div class="mx-auto mt-16 grid gap-10 md:grid-cols-2">
+    {
+      faqCols.map((faqCol) => (
+        <div class="flex w-full flex-col gap-10">
+          {faqCol.map(({ question, answer }, idx) => (
+            <FaqCard {question} {answer} />
+          ))}
+        </div>
+      ))
+    }
+  </div>
+</section>

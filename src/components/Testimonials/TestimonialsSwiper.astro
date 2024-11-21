@@ -1,0 +1,130 @@
+---
+/**
+ * * Testimonials section swiper
+ */
+
+import { Icon } from "astro-icon";
+
+// swiper style imports
+import "swiper/css";
+import "swiper/css/pagination";
+import "./testimonialSwiper.scss"; // have to define custom styles like this
+
+// components
+import TestimonialCard from "./TestimonialCard.astro";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { getTranslatedData } from "@js/translationUtils";
+
+// data
+const currLocale = getLocaleFromUrl(Astro.url);
+const testimonialData = getTranslatedData("testimonialData", currLocale);
+---
+
+<section id="faq2" class="bg-base-200/50 py-20 md:my-16">
+  <div class="site-container">
+    <div class="flex justify-center">
+      <h2 class="h2 flex gap-1 text-center">
+        <span>Our customers love</span>
+        <span>
+          <Icon
+            name="stellar/freehand-heart"
+            class="h-8 w-auto text-primary-500"
+            aria-hidden="true"
+          />
+        </span>
+        <span>us</span>
+      </h2>
+    </div>
+
+    <div class="mt-10 overflow-hidden pb-10">
+      <!-- swiper -->
+      <div class="testimonials__swiper relative mt-10">
+        <!-- Additional required wrapper -->
+        <div class="swiper-wrapper">
+          <!-- Slides -->
+          {
+            testimonialData.map((testimonial, idx) => (
+              <div class="swiper-slide">
+                <TestimonialCard {...testimonial} />
+              </div>
+            ))
+          }
+        </div>
+        <!-- If we need pagination -->
+        <div class="swiper-pagination"></div>
+
+        <!-- If we need navigation buttons -->
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-button-next"></div>
+
+        <!-- If we need scrollbar -->
+        <div class="swiper-scrollbar"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Import Swiper and modules
+  import Swiper from "swiper";
+  import type { SwiperOptions } from "swiper/types";
+  import { Pagination } from "swiper/modules";
+  // import { Navigation, Pagination, Scrollbar } from "swiper/modules";
+
+  function swiperSetup() {
+    const SwiperParams: SwiperOptions = {
+      // Install modules
+      modules: [Pagination],
+
+      // Optional parameters
+      direction: "horizontal",
+      spaceBetween: 10,
+      initialSlide: 1,
+      grabCursor: true,
+      centeredSlides: true,
+      // loop: true,
+      // speed: 500,
+
+      breakpoints: {
+        // when window width is >= 768px
+        768: {
+          slidesPerView: 2,
+          spaceBetween: 20,
+        },
+        // when window width is >= 1024px
+        1024: {
+          slidesPerView: 3,
+          spaceBetween: 40,
+        },
+      },
+
+      // If we need pagination
+      pagination: {
+        el: ".swiper-pagination",
+        clickable: true,
+      },
+
+      // Navigation arrows
+      // navigation: {
+      //   nextEl: ".swiper-button-next",
+      //   prevEl: ".swiper-button-prev",
+      // },
+
+      // And if we need scrollbar
+      // scrollbar: {
+      //   el: '.swiper-scrollbar',
+      // },
+    };
+
+    // Now you can use Swiper
+    const swiper = new Swiper(".testimonials__swiper", SwiperParams);
+  }
+
+  // runs on initial page load
+  swiperSetup();
+
+  // runs on view transitions navigation
+  document.addEventListener("astro:after-swap", swiperSetup);
+</script>

@@ -1,0 +1,95 @@
+---
+/**
+ * * These are small cards with icons, titles, and text. With title first
+ * This looks best with an even number of cards. They are smaller to
+ * use with more cards in the same section. 4 or 6 cards is probably ideal
+ *
+ * ! If you can an error for an icon like "Error: Not Found: "calendar-check" in pack "tabler",
+ * ! You can copy to actual SVG into src/icons and name it however and use similar to below
+ */
+
+import { Icon } from "astro-icon";
+
+// components
+import FeatureCard from "@components/FeatureCard/FeatureCardSmall.astro";
+
+interface FeatureData {
+  icon: string;
+  title: string;
+  text: string;
+}
+
+// data
+const featureData: FeatureData[] = [
+  {
+    icon: "tabler/paint",
+    title: "Professional quality",
+    text: `Our team of experienced painters uses high-quality materials and techniques to 
+      ensure a flawless finish that will last for years to come.`,
+  },
+  {
+    icon: "tabler/heart",
+    title: "Fair prices",
+    text: `We believe that everyone deserves a beautifully painted space, and our commitment 
+      to affordability reflects our dedication to making that a reality for our valued clients. `,
+  },
+  {
+    icon: "tabler/clock",
+    title: "Fast service",
+    text: `We understand that time is of the essence, and we work efficiently to complete your 
+      project in a timely manner without compromising quality.`,
+  },
+  {
+    icon: "tabler/list-check",
+    title: "Customer satisfaction",
+    text: `We prioritize customer satisfaction and work closely with our clients to ensure that 
+      their vision is brought to life.`,
+  },
+  {
+    icon: "tabler/home-heart",
+    title: "Durability",
+    text: `We use high-quality materials and techniques to ensure that our paint jobs are 
+      durable and long-lasting.`,
+  },
+  {
+    icon: "tabler/wand",
+    title: "Beautiful results",
+    text: `Our team of skilled painters has an eye for detail and a passion for creating 
+      beautiful spaces. We create stunning results that leave our clients thrilled.`,
+  },
+];
+---
+
+<section id="feature-cards-small" class="py-12 md:my-12">
+  <div class="site-container relative">
+    <div class="mx-auto mb-10 flex max-w-lg justify-center">
+      <h2 class="h2 text-center">
+        Our <span class="relative whitespace-nowrap">
+          committment
+          <Icon
+            name="stellar/freehand-circle-multi-loop"
+            class="absolute inset-0 -z-10 w-full -translate-y-6 scale-y-50 text-primary-200 sm:-translate-y-8"
+            aria-hidden="true"
+          />
+        </span> to you
+      </h2>
+    </div>
+    <div
+      id="trigger-small-cards"
+      class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+    >
+      {
+        featureData.map((feature, idx) => (
+          <FeatureCard
+            title={feature.title}
+            text={feature.text}
+            icon={feature.icon}
+            data-aos="fade-up"
+            data-aos-delay={0.15 * idx}
+            data-aos-trigger="#trigger-small-cards"
+          />
+        ))
+      }
+    </div>
+  </div>
+</section>

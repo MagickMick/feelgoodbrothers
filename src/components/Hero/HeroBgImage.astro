@@ -1,0 +1,98 @@
+---
+/**
+ * * Hero with background image
+ * You'll want a mobile image, and a desktop image for this.
+ */
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { Icon } from "astro-icon";
+import { Image } from "astro:assets";
+
+// components
+import Button from "@components/Button/Button.astro";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { useTranslations } from "@js/translationUtils";
+
+// images
+import heroImage from "@assets/images/happy-family-crop2.png";
+import heroImageMobile from "@assets/images/happy-family-crop-mobile2.png";
+
+const currLocale = getLocaleFromUrl(Astro.url);
+const t = useTranslations(currLocale);
+---
+
+<section id="hero" class="md:pb-22 relative mb-14 flex min-h-[60svh] w-full">
+  <!-- background image -->
+  <div class="absolute -z-20 h-full w-full overflow-hidden bg-white opacity-60">
+    <Image
+      src={heroImage}
+      class="hidden h-full w-auto object-cover sm:block"
+      alt="smiling family"
+      aria-hidden="true"
+      loading="eager"
+      height={2000}
+    />
+    <Image
+      src={heroImageMobile}
+      class="h-full w-auto object-cover sm:hidden"
+      alt="smiling family"
+      aria-hidden="true"
+      loading="eager"
+      width={1200}
+    />
+  </div>
+
+  <!-- another gradient filter so text has even light bg -->
+  <div
+    class="absolute -z-10 h-full w-full bg-gradient-to-r from-white/90 via-white/50 to-white/50 md:to-transparent"
+  >
+  </div>
+
+  <!-- hero items -->
+  <div class="site-container w-full gap-10 pb-24 pt-36 md:pb-36 md:pt-44">
+    <!-- Hero text -->
+    <div class="mr-auto max-w-[450px]">
+      <h1
+        class="text-4xl font-medium leading-tight sm:text-5xl md:leading-tight"
+        data-aos="fade-up"
+      >
+        Quality work you deserve from the people you
+        <span class="relative whitespace-nowrap">
+          trust.
+          <span>
+            <Icon
+              name="stellar/freehand-zig-underline"
+              class="absolute left-0 top-0 -z-10 h-full w-full translate-y-1/2 text-primary-400"
+              aria-hidden="true"
+            />
+          </span>
+        </span>
+      </h1>
+      <p class="description mt-6" data-aos="fade-up" data-aos-delay=".2">
+        {t("hero_description")}
+      </p>
+      <div class="mt-6 flex flex-wrap gap-4">
+        <Button
+          variant="primary"
+          href={getRelativeLocaleUrl(currLocale, "/contact")}
+          data-aos="fade-up"
+          data-aos-delay=".9"
+        >
+          Get a FREE quote
+        </Button>
+        <Button
+          variant="outline"
+          href="https://cosmicthemes.com/themes/stellar/"
+          target="_blank"
+          class=""
+          rel="noopener noreferrer"
+          data-aos="fade-up"
+          data-aos-delay="1.1"
+        >
+          Get Stellar
+        </Button>
+      </div>
+    </div>
+  </div>
+</section>

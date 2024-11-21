@@ -1,0 +1,77 @@
+---
+/**
+ * * CTA card with centered text and corner blobs
+ */
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { Icon } from "astro-icon";
+
+// components
+import Button from "@components/Button/Button.astro";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+
+const currLocale = getLocaleFromUrl(Astro.url);
+---
+
+<section id="cta" class="my-24 py-8 md:my-36">
+  <div class="site-container">
+    <div
+      class="relative h-full w-full overflow-hidden rounded-xl border border-primary-300"
+    >
+      <!-- bottom left blob -->
+      <Icon
+        name="stellar/blob-1"
+        class="absolute left-0 top-0 -z-10 h-[200%] w-[150%] -translate-x-[50%] rotate-12 text-primary-200/50"
+        aria-hidden="true"
+      />
+
+      <!-- top left blob -->
+      <Icon
+        name="stellar/blob-2"
+        class="absolute left-0 top-0 -z-10 h-[200%] w-[150%] -translate-x-[50%] -translate-y-[50%] rotate-12 text-primary-400/50"
+        aria-hidden="true"
+      />
+
+      <!-- bottom right blob -->
+      <Icon
+        name="stellar/blob-2"
+        class="absolute left-0 top-0 -z-10 h-[200%] w-[150%] translate-x-[20%] text-primary-400/50"
+        aria-hidden="true"
+      />
+
+      <!-- center card -->
+      <div class="relative z-10 p-1">
+        <div class="rounded-xl px-4 py-20 text-center">
+          <div class="mx-auto max-w-2xl">
+            <h2 class="h1">
+              What are <span class="relative whitespace-nowrap">
+                you
+                <span>
+                  <Icon
+                    name="stellar/freehand-zig-underline"
+                    class="absolute left-0 top-0 -z-10 h-full w-full translate-y-1/2 text-primary-400"
+                    aria-hidden="true"
+                  />
+                </span>
+              </span>
+              waiting for?
+            </h2>
+            <p class="description mt-6">
+              Schedule your free quote today and turn your vision into reality.
+            </p>
+            <div class="mt-10 flex justify-center">
+              <Button
+                variant="primary"
+                href={getRelativeLocaleUrl(currLocale, "/contact")}
+                arrow="right"
+              >
+                Schedule a free estimate
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,82 @@
+---
+import { getRelativeLocaleUrl } from "astro:i18n";
+
+// components
+import FooterLink from "@components/Footer/FooterLink.astro";
+import SiteLogo from "@components/SiteLogo/SiteLogo.astro";
+import Button from "@components/Button/Button.astro";
+import SocialIcon from "@components/SocialIcon/SocialIcon.astro";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { getTranslatedData } from "@js/translationUtils";
+
+// data
+const currLocale = getLocaleFromUrl(Astro.url);
+const siteData = getTranslatedData("siteData", currLocale);
+
+const today = new Date();
+---
+
+<footer class="site-container mb-16 mt-20 border-t border-t-base-300">
+  <div class="grid w-full justify-between gap-4 md:grid-cols-2">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div class="mt-6 flex flex-col items-start gap-4">
+        <SiteLogo />
+        <div class="">
+          <Button variant="primary" href="/contact/">Get a FREE quote</Button>
+        </div>
+        <div class="hidden text-sm opacity-80 md:block">
+          &copy; {today.getFullYear()}
+          {" "}{siteData.name}. All rights reserved.
+        </div>
+      </div>
+
+      <!-- Contact info -->
+      <div class="flex flex-col">
+        <h3 class="mb-2 mt-6 text-lg font-medium">Location & Contact</h3>
+        <p>{siteData.contact.address1}</p>
+        <p>{siteData.contact.address2}</p>
+        <p>
+          Ph: <a
+            href={`tel:${siteData.contact.phone}`}
+            class="transition hover:text-primary-500 hover:underline"
+            >{siteData.contact.phone}</a
+          >
+        </p>
+        <a
+          href="mailto:example@email.com"
+          class="transition hover:text-primary-500 hover:underline"
+          >{siteData.contact.email}</a
+        >
+      </div>
+    </div>
+
+    <div class="flex items-center md:justify-end">
+      <!-- Socials -->
+      <div class="flex flex-col">
+        <div class="flex gap-2">
+          <SocialIcon
+            href="https://twitter.com/BowTiedWebReapr"
+            icon="tabler/brand-x"
+            social="twitter (x)"
+          />
+          <SocialIcon
+            href="https://twitter.com/BowTiedWebReapr"
+            icon="tabler/brand-facebook"
+            social="facebook"
+          />
+          <SocialIcon
+            href="https://twitter.com/BowTiedWebReapr"
+            icon="tabler/brand-google-filled"
+            social="google"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mt-6 text-sm opacity-80 md:hidden">
+    &copy; {today.getFullYear()}
+    {" "}{siteData.name}. All rights reserved.
+  </div>
+</footer>

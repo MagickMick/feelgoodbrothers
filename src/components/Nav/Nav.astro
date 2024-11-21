@@ -1,0 +1,118 @@
+---
+// components
+import NavLink from "@components/Nav/NavLink.astro";
+import NavDropdown from "@components/Nav/NavDropdown/NavDropdown.astro";
+import NavDropdownToggle from "@components/Nav/NavDropdown/NavDropdownToggle.astro";
+import MegaMenuDropdownToggle from "@components/Nav/NavDropdown/MegaMenuDropdownToggle.astro";
+import MobileNav from "@components/Nav/MobileNav/MobileNav.astro";
+import SiteLogo from "@components/SiteLogo/SiteLogo.astro";
+import Button from "@components/Button/Button.astro";
+import LanguageSelect from "@components/LanguageSelect/LanguageSelect.astro";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { getTranslatedData } from "@js/translationUtils";
+
+// data
+const currLocale = getLocaleFromUrl(Astro.url);
+const navData = getTranslatedData("navData", currLocale);
+import { locales } from "@config/siteSettings.json";
+// console.log(JSON.stringify(navData, null, 2));
+---
+
+<div
+  id="nav__container"
+  class="fixed left-0 top-0 z-30 flex w-full flex-col border-b border-b-transparent bg-transparent py-3 transition-all duration-500"
+  transition:name={`nav`}
+>
+  <div class="mx-auto flex w-full">
+    <div class="site-container flex h-16 w-full items-center">
+      <header class="relative flex w-full items-center gap-2">
+        <!-- home button / image -->
+        <div class="flex flex-auto justify-start">
+          <SiteLogo />
+        </div>
+
+        <div class="flex flex-auto justify-center">
+          <nav class="hidden md:block">
+            <ul class="flex h-fit items-center px-4">
+              {
+                // if dropdown exists, setup the dropdown, otherwise it is just a link
+                navData.map((navItem) =>
+                  "dropdown" in navItem ? (
+                    // non-mobile dropdown menu
+                    <>
+                      {/* <NavDropdown navItem={navItem} /> */}
+                      <NavDropdownToggle navItem={navItem} />
+                    </>
+                  ) : "megaMenuColumns" in navItem ? (
+                    <MegaMenuDropdownToggle {navItem} />
+                  ) : (
+                    // normal nav link
+                    <NavLink {navItem} />
+                  ),
+                )
+              }
+            </ul>
+          </nav>
+        </div>
+
+        <!-- desktop nav menu -->
+        <div class="flex flex-auto justify-end">
+          <Button
+            variant="primary"
+            class="my-auto hidden md:block"
+            href="https://cosmicthemes.com/themes/stellar/"
+          >
+            Get Stellar!
+          </Button>
+
+          {
+            locales.length > 1 && (
+              <LanguageSelect class="ml-2 hidden md:block" />
+            )
+          }
+
+          <!-- mobile nav menu, only load on small screens where it is visible -->
+          <div class="md:hidden">
+            <MobileNav />
+          </div>
+        </div>
+      </header>
+    </div>
+  </div>
+</div>
+
+<script>
+  let navbar: HTMLElement | null;
+
+  function scrollHandler() {
+    if (navbar) {
+      if (window.scrollY > 50) {
+        // if we have scrolled down the page a bit, change navbar
+        navbar.classList.add("bg-base-50");
+        navbar.classList.remove("bg-transparent");
+        navbar.classList.add("border-b-base-200");
+        navbar.classList.remove("border-b-transparent");
+        navbar.classList.remove("py-3");
+      } else {
+        navbar.classList.add("py-3");
+        navbar.classList.remove("bg-base-50");
+        navbar.classList.add("bg-transparent");
+        navbar.classList.remove("border-b-base-200");
+        navbar.classList.add("border-b-transparent");
+      }
+    }
+  }
+
+  function initNav() {
+    navbar = document.getElementById("nav__container");
+    window.addEventListener("scroll", scrollHandler, { passive: true });
+  }
+
+  // runs on initial page load
+  initNav();
+
+  // runs on view transitions navigation. Not needed if item has "transition:persist"
+  document.addEventListener("astro:after-swap", initNav);
+</script>

@@ -1,0 +1,113 @@
+---
+/**
+ * * Hero with background blobs and side image
+ *
+ * There is a commented out "awards" section below in case you want that
+ */
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { Icon } from "astro-icon";
+import { Image } from "astro:assets";
+
+// components
+import Button from "@components/Button/Button.astro";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { useTranslations } from "@js/translationUtils";
+
+// images
+import heroImage from "@assets/images/business-owner-min.png";
+import award1 from "@images/awards/award-yelp.png";
+import award2 from "@images/awards/award-homeadvisor.png";
+import award3 from "@images/awards/award-angieslist.png";
+
+const currLocale = getLocaleFromUrl(Astro.url);
+const t = useTranslations(currLocale);
+---
+
+<section id="hero" class="relative mb-14 flex min-h-[60svh] w-full pb-10">
+  <!-- Background -->
+  <div class="absolute -z-10 h-full w-full">
+    <Icon
+      name="stellar/two-blobs"
+      class="h-full w-full text-primary-200/50"
+      aria-hidden="true"
+    />
+  </div>
+
+  <!-- hero items -->
+  <div
+    class="site-container mr-auto grid items-start gap-8 pb-6 pt-36 md:grid-cols-2 md:pb-20 md:pt-44"
+  >
+    <!-- Hero text -->
+    <div class="mx-auto max-w-[450px] md:ml-0">
+      <h1
+        class="text-4xl font-medium leading-tight lg:text-5xl lg:leading-tight"
+        data-aos="fade-up"
+      >
+        Quality work you deserve from the people you
+        <span class="relative whitespace-nowrap">
+          trust.
+          <span>
+            <Icon
+              name="stellar/freehand-zig-underline"
+              class="absolute left-0 top-0 -z-10 h-full w-full translate-y-1/2 text-primary-300"
+              aria-hidden="true"
+            />
+          </span>
+        </span>
+      </h1>
+      <p class="description mt-6" data-aos="fade-up">
+        {t("hero_description")}
+      </p>
+      <div class="mt-6 flex gap-4">
+        <Button
+          variant="primary"
+          href={getRelativeLocaleUrl(currLocale, "/contact")}
+          data-aos="fade-up"
+          data-aos-delay=".9"
+        >
+          Get a FREE quote
+        </Button>
+      </div>
+
+      <!-- awards example, uncomment to see -->
+      <!-- <div class="mt-10 flex flex-wrap gap-6 md:col-span-2">
+        <Image
+          src={award1}
+          alt="yelp award"
+          loading="lazy"
+          height={100}
+          class="h-10 w-auto"
+        />
+        <Image
+          src={award2}
+          alt="home advisor award"
+          loading="lazy"
+          height={100}
+          class="h-10 w-auto"
+        />
+        <Image
+          src={award3}
+          alt="angies list award"
+          loading="lazy"
+          height={100}
+          class="h-10 w-auto"
+        />
+      </div> -->
+    </div>
+    <!-- hero image -->
+    <div class="mx-auto max-w-lg md:max-w-full">
+      <Image
+        src={heroImage}
+        class="rounded-xl"
+        alt="small business owner"
+        loading="eager"
+        width={600}
+        densities={[1.5, 2]}
+        data-aos="fade-in"
+        data-aos-delay=".2"
+      />
+    </div>
+  </div>
+</section>

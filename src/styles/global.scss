@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* https://tailwindcss.com/docs/adding-custom-styles#using-css-and-layer */
+@layer base {
+  html {
+    @apply text-base leading-[1.6rem] text-base-900;
+    scroll-behavior: smooth;
+  }
+
+  ::-webkit-scrollbar {
+    @apply h-1 w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-inherit;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-base-400 bg-opacity-90;
+  }
+}
+
+/*  things in the components layer can be overriden with utility classes. 
+    Useful for custom styles on third-party components, and things like 
+    btn, card, badge, etc  */
+@layer components {
+  @import "buttons";
+  @import "prose";
+
+  .h1 {
+    @apply text-3xl font-medium md:text-4xl lg:text-5xl;
+  }
+
+  .h2 {
+    @apply text-2xl font-medium sm:text-3xl;
+  }
+
+  .h3 {
+    @apply text-lg font-medium md:text-xl;
+  }
+
+  .description {
+    @apply opacity-90 md:text-lg;
+  }
+
+  .site-container {
+    @apply mx-auto max-w-6xl px-4;
+  }
+
+  /* used for newsletter, and contact form inputs */
+  .form__input {
+    @apply w-full rounded-md border border-transparent bg-base-200/50 p-2.5 transition;
+    @apply focus-visible:border-primary-500 focus-visible:ring-1 focus-visible:ring-primary-500;
+  }
+}
+
+@layer utilities {
+  @import "aos";
+
+  /* focus utility class (for when user is tabbing through items on page) */
+  .primary-focus {
+    @apply focus:outline-none focus-visible:rounded-sm focus-visible:outline-primary-500;
+  }
+
+  /* main gradient. Used for tags and some headings */
+  .main-text-gradient {
+    @apply bg-gradient-to-r from-indigo-600 to-sky-600 bg-clip-text text-transparent;
+  }
+
+  /* use with "animate-pause" to pause a CSS animation */
+  .pause {
+    animation-play-state: paused !important;
+  }
+}
