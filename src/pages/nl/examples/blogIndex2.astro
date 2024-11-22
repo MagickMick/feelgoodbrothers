@@ -14,7 +14,7 @@ import { getLocaleFromUrl } from "@js/localeUtils";
 const currLocale = getLocaleFromUrl(Astro.url);
 const posts = await getAllPosts(currLocale);
 ---
-<section class="site-container pt-10 md:pt-16">
+<section id="blogs" class="site-container pt-10 md:pt-16">
     <h1 class="h1">
       Helpful blogs from <span class="text-primary-600">us</span>
     </h1>

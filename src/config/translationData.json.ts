@@ -57,13 +57,13 @@ export const dataTranslations = {
 export const textTranslations = {
   en: {
     hero_description:
-      "A template for small business needs. Multiple pages and sections, blog, i18n, animations, CMS - all ready to go.",
+      "Three brothers share their experiences with mental issues and how they cope with them. Read along and discover that you’re not alone in this.",
     back_to_all_posts: "Back to all posts",
     updated: "Updated",
   },
   nl: {
     hero_description:
-      "Dit is een blog van drie broers die schrijven over hun eigen (metale) uitdagingen, om te laten zien dat je er niet alleen voor staat.",
+      "Drie broers delen hun ervaringen met mentale uitdagingen en hoe ze ermee omgaan. Lees mee en ontdek dat ook jij er niet alleen voor staat.",
     back_to_all_posts: "Terug naar alle blogs",
     updated: "Update",
   },
