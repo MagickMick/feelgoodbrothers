@@ -2,19 +2,23 @@ import { type SiteDataProps } from "../types/configDataTypes";
 
 // Update this file with your site specific information
 const siteData: SiteDataProps = {
-  name: "Dutch Stellar",
+  name: "Feelgood Brothers",
   // Your website's title and description (meta fields)
   title:
-    "Nederlands Stellar - a small business theme and landing page crafted with Astro and Tailwind CSS",
+    "Feelgood Brothers - Verhalen over mentale gezondheid",
   description:
-    "Create an amazing website for your small business clients with our beautiful website theme designed using Astro and Tailwind CSS. Perfect for freelancers, developers, startups, and personal use.",
+    "Ontdek persoonlijke verhalen over mentale uitdagingen van de Feelgood Brothers, vol hoop, steun en manieren om de uitdagingen van het leven aan te gaan.",
 
   // used on contact page and footer
   contact: {
-    address1: "Straatnaam 123",
-    address2: "1234AB Amsterdam",
-    phone: "06-12345678",
+    heading: "Vragen?",
     email: "info@feelgoodbrothers.com",
+  },
+
+  // used on contact page and footer
+  story: {
+    heading: "Jouw verhaal delen?",
+    email: "story@feelgoodbrothers.com",
   },
 
   // Your information for blog post purposes

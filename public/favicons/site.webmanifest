@@ -1,6 +1,6 @@
 {
-  "name": "Stellar",
-  "short_name": "Stellar",
+  "name": "Feelgood Brothers",
+  "short_name": "FGB",
   "icons": [
     {
       "src": "android-chrome-192x192.png",
@@ -13,7 +13,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#ffffff",
+  "theme_color": "#F97516",
   "background_color": "#ffffff",
   "display": "standalone"
 }

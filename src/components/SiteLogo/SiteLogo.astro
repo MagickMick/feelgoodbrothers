@@ -3,7 +3,7 @@ import { getRelativeLocaleUrl } from "astro:i18n";
 import { Image } from "astro:assets";
 
 // images
-import logo from "@images/stellar-logo.png";
+import logo from "@images/FGB-logo-orange.png";
 
 // utils
 import { getLocaleFromUrl } from "@js/localeUtils";
@@ -22,10 +22,10 @@ const siteData = getTranslatedData("siteData", currLocale);
   <p class="sr-only">{siteData.title}</p>
   <Image
     src={logo}
-    alt="Stellar logo"
+    alt="Feelgood Brothers logo"
     loading="eager"
     height={90}
     class="h-10 w-auto"
-    aria-label="Stellar logo"
+    aria-label="Feelgood Brothers logo"
   />
 </a>

@@ -23,57 +23,32 @@ const today = new Date();
     <div class="grid gap-4 sm:grid-cols-2">
       <div class="mt-6 flex flex-col items-start gap-4">
         <SiteLogo />
-        <div class="">
-          <Button variant="primary" href="/contact/">Get a FREE quote</Button>
-        </div>
         <div class="hidden text-sm opacity-80 md:block">
           &copy; {today.getFullYear()}
-          {" "}{siteData.name}. All rights reserved.
+          {" | "}{siteData.name}
         </div>
       </div>
 
       <!-- Contact info -->
-      <div class="flex flex-col">
-        <h3 class="mb-2 mt-6 text-lg font-medium">Location & Contact</h3>
-        <p>{siteData.contact.address1}</p>
-        <p>{siteData.contact.address2}</p>
-        <p>
-          Ph: <a
-            href={`tel:${siteData.contact.phone}`}
-            class="transition hover:text-primary-500 hover:underline"
-            >{siteData.contact.phone}</a
-          >
-        </p>
+      <div class="flex flex-col">  
+        <h3 class="mb-2 mt-6 text-lg font-medium">{siteData.contact.heading}</h3>
+            
         <a
-          href="mailto:example@email.com"
+          href="mailto:info@feelgoodbrothers.com"
           class="transition hover:text-primary-500 hover:underline"
           >{siteData.contact.email}</a
+        >
+        <h3 class="mb-2 mt-6 text-lg font-medium">{siteData.story.heading}</h3>
+            
+        <a
+          href="mailto:story@feelgoodbrothers.com"
+          class="transition hover:text-primary-500 hover:underline"
+          >{siteData.story.email}</a
         >
       </div>
     </div>
 
-    <div class="flex items-center md:justify-end">
-      <!-- Socials -->
-      <div class="flex flex-col">
-        <div class="flex gap-2">
-          <SocialIcon
-            href="https://twitter.com/BowTiedWebReapr"
-            icon="tabler/brand-x"
-            social="twitter (x)"
-          />
-          <SocialIcon
-            href="https://twitter.com/BowTiedWebReapr"
-            icon="tabler/brand-facebook"
-            social="facebook"
-          />
-          <SocialIcon
-            href="https://twitter.com/BowTiedWebReapr"
-            icon="tabler/brand-google-filled"
-            social="google"
-          />
-        </div>
-      </div>
-    </div>
+    
   </div>
   <div class="mt-6 text-sm opacity-80 md:hidden">
     &copy; {today.getFullYear()}

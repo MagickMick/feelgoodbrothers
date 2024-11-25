@@ -15,9 +15,9 @@ const currLocale = getLocaleFromUrl(Astro.url);
 const posts = await getAllPosts(currLocale);
 ---
 <section id="blogs" class="site-container pt-10 md:pt-16">
-    <h1 class="h1">
+    <h2 class="h1">
       Waardevolle blogs van <span class="text-primary-600">ons</span>
-    </h1>
+    </h2>
     <div class="mt-4 flex">
       <CategoryCloud />
     </div>

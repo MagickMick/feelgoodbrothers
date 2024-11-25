@@ -5,9 +5,12 @@ export interface SiteDataProps {
   description: string;
   contact: {
     // used for contact page and footer
-    address1: string; // contact address (line 1)
-    address2: string; // contact address (line 2)
-    phone: string; // contact phone number
+    heading: string // contact heading
+    email: string; // contact email address
+  };
+  story: {
+    // used for contact page and footer
+    heading: string // contact heading
     email: string; // contact email address
   };
   author: {
