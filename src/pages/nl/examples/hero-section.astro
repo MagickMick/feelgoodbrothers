@@ -1,0 +1,82 @@
+---
+// components
+import { Icon } from "astro-icon";
+import Button from "@components/Button/Button.astro";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { useTranslations } from "@js/translationUtils";
+
+const currLocale = getLocaleFromUrl(Astro.url);
+const t = useTranslations(currLocale);
+---
+
+<section id="hero" class="md:pb-22 relative mb-14 flex min-h-[60svh] w-full overflow-hidden">
+  <!-- background image -->
+ <!-- bottom left blob -->
+ <Icon
+ name="stellar/blob-1"
+ class="absolute left-0 top-0 -z-10 h-[200%] w-[150%] -translate-x-[50%] rotate-12 text-primary-200/50"
+ aria-hidden="true"
+/>
+
+<!-- top left blob -->
+<Icon
+ name="stellar/blob-2"
+ class="absolute left-0 top-0 -z-10 h-[200%] w-[150%] -translate-x-[50%] -translate-y-[50%] rotate-12 text-primary-400/50"
+ aria-hidden="true"
+/>
+
+<!-- bottom right blob -->
+<Icon
+ name="stellar/blob-2"
+ class="absolute left-0 top-0 -z-10 h-[200%] w-[150%] translate-x-[20%] text-primary-400/50"
+ aria-hidden="true"
+/>
+
+  <!-- hero items -->
+  <div class="site-container w-full gap-10 pb-24 pt-36 md:pb-36 md:pt-44">
+    <!-- Hero text -->
+    <div class="mr-auto max-w-[450px]">
+      <h1
+        class="text-4xl font-medium leading-tight sm:text-5xl md:leading-tight"
+        data-aos="fade-up"
+      >
+        Mentale uitdagingen zijn niet raar, maar
+        <span class="relative whitespace-nowrap">
+          menselijk.
+          <span>
+            <Icon
+              name="stellar/freehand-zig-underline"
+              class="absolute left-0 top-1 -z-10 h-full w-full translate-y-1/2 text-primary-400"
+              aria-hidden="true"
+            />
+          </span>
+        </span>
+      </h1>
+      <p class="description mt-6" data-aos="fade-up" data-aos-delay=".2">
+        {t("hero_description")}
+      </p>
+      <div class="mt-6 flex flex-wrap gap-4">
+        <Button
+          variant="primary"
+          href="#blogs"
+          data-aos="fade-up"
+          data-aos-delay=".9"
+        >
+          Onze blogs
+        </Button>
+        <Button
+          variant="outline"
+          href="/nl/over-ons"
+          class=""
+          rel="noopener noreferrer"
+          data-aos="fade-up"
+          data-aos-delay="1.1"
+        >
+          Over ons
+        </Button>
+      </div>
+    </div>
+  </div>
+</section>

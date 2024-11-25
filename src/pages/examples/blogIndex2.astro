@@ -15,34 +15,29 @@ const currLocale = getLocaleFromUrl(Astro.url);
 const posts = await getAllPosts(currLocale);
 ---
 
-<BaseLayout
-  title="Our Blog Posts"
-  description="Learn from our blog posts about web development, design, and more."
->
-  <section class="site-container pt-36 md:pt-44">
-    <h1 class="h1">
-      Helpful tips from <span class="text-primary-600">us</span>
-    </h1>
-    <div class="mt-4 flex">
-      <CategoryCloud />
-    </div>
+<section id="blogs" class="site-container pt-10 md:pt-16">
+  <h1 class="h1">
+    Helpful tips from <span class="text-primary-600">us</span>
+  </h1>
+  <div class="mt-4 flex">
+    <CategoryCloud />
+  </div>
 
-    <div class="mt-10 grid gap-4 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
-      {
-        posts.map((post) => {
-          if (post === posts[0]) {
-            return (
-              <PostCardLarge
-                post={post}
-                showDescription={true}
-                class="md:col-span-2 lg:col-span-3"
-              />
-            );
-          } else {
-            return <PostCardSmall post={post} showDescription={false} />;
-          }
-        })
-      }
-    </div>
-  </section>
-</BaseLayout>
+  <div class="mt-10 grid gap-4 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+    {
+      posts.map((post) => {
+        if (post === posts[0]) {
+          return (
+            <PostCardLarge
+              post={post}
+              showDescription={true}
+              class="md:col-span-2 lg:col-span-3"
+            />
+          );
+        } else {
+          return <PostCardSmall post={post} showDescription={false} />;
+        }
+      })
+    }
+</div>
+</section>

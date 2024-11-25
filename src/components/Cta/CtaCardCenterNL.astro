@@ -1,8 +1,8 @@
 ---
 /**
- * * CTA card with centered text and blobs
+ * * CTA card with centered text and corner blobs
  */
-import { getRelativeLocaleUrl } from "astro:i18n";
+ import { getRelativeLocaleUrl } from "astro:i18n";
 import { Icon } from "astro-icon";
 
 // components
@@ -17,29 +17,36 @@ const currLocale = getLocaleFromUrl(Astro.url);
 <section id="cta" class="my-24 py-8 md:my-36">
   <div class="site-container">
     <div
-      class="relative h-full w-full overflow-hidden rounded-xl bg-primary-100"
+      class="relative h-full w-full overflow-hidden rounded-xl border border-primary-300"
     >
       <!-- bottom left blob -->
       <Icon
         name="stellar/blob-1"
-        class="absolute bottom-0 left-0 aspect-square h-[100%] -translate-x-[20%] translate-y-[40%] rotate-12 text-primary-400/50 md:h-[150%]"
+        class="absolute left-0 top-0 -z-10 h-[200%] w-[150%] -translate-x-[50%] rotate-12 text-primary-200/50"
         aria-hidden="true"
       />
 
-      <!-- top right blob -->
+      <!-- top left blob -->
       <Icon
-        name="stellar/blob-3"
-        class="absolute right-0 top-0 aspect-square h-[100%] -translate-y-[30%] translate-x-[20%] text-primary-400/50 md:h-[150%]"
+        name="stellar/blob-2"
+        class="absolute left-0 top-0 -z-10 h-[200%] w-[150%] -translate-x-[50%] -translate-y-[50%] rotate-12 text-primary-400/50"
+        aria-hidden="true"
+      />
+
+      <!-- bottom right blob -->
+      <Icon
+        name="stellar/blob-2"
+        class="absolute left-0 top-0 -z-10 h-[200%] w-[150%] translate-x-[20%] text-primary-400/50"
         aria-hidden="true"
       />
 
       <!-- center card -->
-      <div class="relative z-20 p-1">
+      <div class="relative z-10 p-1">
         <div class="rounded-xl px-4 py-20 text-center">
           <div class="mx-auto max-w-2xl">
             <h2 class="h1">
-              What are <span class="relative whitespace-nowrap">
-                you
+              Waar <span class="relative whitespace-nowrap">
+                wacht je
                 <span>
                   <Icon
                     name="stellar/freehand-zig-underline"
@@ -47,18 +54,19 @@ const currLocale = getLocaleFromUrl(Astro.url);
                     aria-hidden="true"
                   />
                 </span>
-              </span> waiting for?
+              </span>
+              op?
             </h2>
             <p class="description mt-6">
-              Schedule your free quote today and turn your vision into reality.
+              Duik in onze verhalen en ontdek hoe wij ons leven navigeren met mentale uitdagingen.
             </p>
             <div class="mt-10 flex justify-center">
               <Button
                 variant="primary"
-                href={getRelativeLocaleUrl(currLocale, "/contact")}
+                href="http://127.0.0.1:4321/nl/#blogs"
                 arrow="right"
               >
-                Schedule a free estimate
+                Bekijk onze blogs
               </Button>
             </div>
           </div>

@@ -51,7 +51,7 @@ export const dataTranslations = {
  * ```ts
  * import { useTranslations } from "@js/translationUtils";
  * const t = useTranslations("nl");
- * t("back_to_all_posts"); // this would be "Trug naar alle artikelen"
+ * t("back_to_all_posts"); // this would be "Terug naar alle artikelen"
  * ```
  */
 export const textTranslations = {
@@ -81,8 +81,22 @@ export const textTranslations = {
 export const routeTranslations = {
   en: {
     aboutKey: "about",
+    categorieKey: "categories",
+    anxietyKey:"categories/anxiety",
+    depressionKey:"categories/depression",
+    panicattacksKey:"categories/panic-attacks",
+    meditationKey:"categories/meditation",
+    derealisationKey:"categories/derealisation",
+    addicationKey:"categories/addication",
   },
   nl: {
     aboutKey: "over-ons",
+    categorieKey: "categorieen",
+    anxietyKey: "categorieen/angst",
+    depressionKey:"categorieen/depressie",
+    panicattacksKey:"categorieen/paniek-aanvallen",
+    meditationKey:"categorieen/meditatie",
+    derealisationKey:"categorieens/derealisatie",
+    addicationKey:"categorieen/verslaving",
   },
 } as const;

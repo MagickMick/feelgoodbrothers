@@ -52,7 +52,7 @@ const authorsData = await getEntries(authors);
             {
               categories.map((category) => (
                 <a
-                  href={`/categories/${slugify(category)}/`}
+                  href={getRelativeLocaleUrl(currLocale, `/${currLocale === 'nl' ? 'categorieen' : 'categories'}/${category}/`)}
                   class="button button--ghost px-2 py-0.5 font-medium md:px-4 md:py-1"
                 >
                   {humanize(category)}

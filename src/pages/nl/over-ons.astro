@@ -1,0 +1,91 @@
+---
+/**
+ * * About page with various sections including some text, team profiles, and CTA
+ * Edit the team member information inside src/config/teamData.json.ts
+ */
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { Icon } from "astro-icon";
+
+// main layout
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+// components
+import Profile from "@components/Profile/Profile.astro";
+import CtaCardCenter from "@components/Cta/CtaCardCenterNL.astro";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { getTranslatedData } from "@js/translationUtils";
+
+// data
+const currLocale = getLocaleFromUrl(Astro.url);
+const teamData = getTranslatedData("teamData", currLocale);
+---
+
+<BaseLayout
+  title="About us - Feelgood Brothers"
+  description="About the three brothers from FeelGood Brothers who share personal stories and insights on coping with life's challenges"
+>
+  <!-- text section -->
+  <section class="site-container mx-auto pt-36 md:pt-44">
+    <h1 class="h1 text-center">
+      <span class="relative whitespace-nowrap">
+        Over ons
+        <span>
+          <Icon
+            name="stellar/freehand-zig-underline"
+            class="absolute left-0 top-0 -z-10 h-full w-full translate-y-[60%] scale-y-75 text-primary-300"
+            aria-hidden="true"
+          />
+        </span>
+      </span>
+    </h1>
+    <p class="description mx-auto mt-10 max-w-2xl md:mt-20">
+      Welkom op onze blog! Wij zijn drie Nederlandse broers die onze persoonlijke ervaringen met mentale gezondheidsuitdagingen delen. Van angst en paniekaanvallen tot depressie, ADD, derealisatie en nog veel meer: we hebben door de jaren heen verschillende mentale uitdagingen doorgemaakt, zowel persoonlijk als binnen onze familie. We zijn geen professionals, maar mensen die deze uitdagingen hebben meegemaakt en manieren hebben gevonden om ermee om te gaan.
+<br><br>
+<b>Ons verhaal</b><br>
+We komen uit een familie waar mentale gezondheid altijd een rol heeft gespeeld. Opgroeien met gescheiden ouders en een moeder die worstelde met depressie heeft ons genoeg uitdagingen opgeleverd. Mentale gezondheidsproblemen kunnen vaak overweldigend aanvoelen, maar door onze ervaringen hebben we geleerd dat veel mensen hiermee te maken hebben, ook al is het niet altijd zichtbaar.
+<br><br>
+We hebben onze ups en downs gehad en weten uit eerste hand hoe overweldigend mentale gezondheidsproblemen kunnen zijn. Maar we hebben ook geleerd dat het delen van onze verhalen anderen kan helpen te beseffen dat ze niet alleen zijn. Deze blog is onze manier om ons open te stellen en steun te bieden aan anderen die mogelijk door soortgelijke situaties gaan.
+<br><br>
+Elk van ons heeft te maken gehad met verschillende mentale gezondheidsproblemen, en we hebben ieder onze eigen methodes ontwikkeld om ermee om te gaan. We praten openlijk over hoe we omgaan met bijvoorbeeld paniekaanvallen, momenten van derealisatie, de strijd tegen depressie (in onze familie) en hoe we mindfulness, yoga en andere zelfzorgpraktijken gebruiken om metnaal beter in ons vel te zitten.
+<br><br>
+<b>Ons doel</b><br>
+Het doel van deze blog is simpel: informeren, ondersteunen en aanmoedigen. We willen waardevolle inzichten bieden vanuit onze eigen ervaringen en laten zien dat mentale gezondheidsproblemen niets zijn om je voor te schamen en je zeker niet definiëren. We streven ernaar een plek te creëren waar mensen zich begrepen voelen, of ze nu op zoek zijn naar advies, een gevoel van gemeenschap of gewoon een herinnering dat ze niet alleen staan in hun strijd.
+<br><br>
+Naarmate de blog groeit, zullen we meer persoonlijke verhalen en adviezen delen. Uiteindelijk hopen we ook anderen uit te nodigen om hun eigen ervaringen te delen. Ons doel is om een ruimte te creëren waar open gesprekken over mentale gezondheid worden aangemoedigd en mensen zich gesterkt voelen om de regie over hun eigen mentale welzijn te nemen.
+<br><br>
+<b>Waarom we deze blog zijn begonnen</b><br>
+We zijn deze blog begonnen omdat we weten dat veel mensen het gevoel hebben dat ze de last van hun problemen alleen dragen. Hoe meer we over onze eigen problemen spraken, hoe meer we beseften dat mentale gezondheidsuitdagingen veel vaker voorkomen dan we dachten. Door onze persoonlijke ervaringen te delen, hopen we een gevoel van verbinding en begrip te creëren. Voor ons is het ook een soort therapie.
+<br><br>
+We weten dat er geen universele oplossing is voor mentale gezondheid, maar we geloven dat we door open en eerlijk te zijn over onze ervaringen anderen kunnen helpen zich gezien en gehoord te voelen.
+<br><br>
+<b>Onze aanpak</b><br>
+In de loop der tijd hebben we manieren gevonden om te leven met onze mentale gezondheidsuitdagingen, maar we zijn de eersten om toe te geven dat ze vaak nog steeds aanwezig zijn. Hoewel sommige dagen beter zijn dan andere, verdwijnen de problemen niet volledig. We hebben echter geleerd dat het niet gaat om het volledig uitbannen van mentale gezondheidsproblemen, maar om het vinden van strategieën om ermee te leven. Het leven heeft natuurlijk zijn ups en downs, maar we geloven dat dit gewoon deel uitmaakt van de menselijke ervaring—en dat is oké. Het leven zit vol mooie en uitdagende momenten, en die balans hebben we leren accepteren.
+<br><br>
+We willen duidelijk maken dat we geen mentale gezondheidsprofessionals zijn, maar gewoon mensen die delen wat we hebben geleerd uit onze eigen ervaringen. Hoewel we bepaalde strategieën nuttig hebben gevonden, raden we ten zeerste aan om contact op te nemen met therapeuten, psychologen of andere professionals op het gebied van mentale gezondheid voor begeleiding. We hebben zelf ook therapie gevolgd en geloven dat dit een essentieel onderdeel is van het herstelproces.
+<br><br>
+Bedankt voor je bezoek, en wie weet vind je enige herkenning in onze verhalen.
+    </p>
+  </section>
+
+  <!-- meet the team
+  <section class="site-container mt-24 md:mt-36">
+    <h2 class="h2 text-center">
+      Meet the <span class="text-primary-600">team</span>
+    </h2>
+    <div class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        teamData.map((member) => (
+          <Profile
+            name={member.name}
+            title={member.title}
+            image={member.image}
+            bio={member.bio}
+          />
+        ))
+      }
+    </div>
+  </section> -->
+  <CtaCardCenter />
+</BaseLayout>
