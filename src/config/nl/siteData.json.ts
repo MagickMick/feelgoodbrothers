@@ -5,7 +5,7 @@ const siteData: SiteDataProps = {
   name: "Feelgood Brothers",
   // Your website's title and description (meta fields)
   title:
-    "Feelgood Brothers - Verhalen over mentale gezondheid",
+    "Feelgood Brothers - Persoonlijke blogs over mentaal welzijn",
   description:
     "Ontdek persoonlijke verhalen over mentale uitdagingen van de Feelgood Brothers, vol hoop, steun en manieren om de uitdagingen van het leven aan te gaan.",
 

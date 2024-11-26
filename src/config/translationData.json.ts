@@ -88,6 +88,13 @@ export const routeTranslations = {
     meditationKey:"categories/meditation",
     derealisationKey:"categories/derealisation",
     addicationKey:"categories/addication",
+    mindsetKey:"categories/mindset",
+    mindfulnessKey:"categories/mindfulness",
+    highsensitivityKey:"categories/high-sensitivity",
+    severePanicAttackBlogKey: "blog/have-not-had-such-a-severe-panic-attack-in-a-long-time",
+    outofbodyexperienceBlogKey: "blog/out-of-body-experience",
+    takingresponsibilityemotionsBlogKey: "blog/feeling-and-taking-responsibility-for-your-own-emotions",
+    christmasmarketpanicattackBlogKey: "blog/christmas-markets-paradise-for-high-sensitive-people-with-panic-attacks"
   },
   nl: {
     aboutKey: "over-ons",
@@ -98,5 +105,12 @@ export const routeTranslations = {
     meditationKey:"categorieen/meditatie",
     derealisationKey:"categorieens/derealisatie",
     addicationKey:"categorieen/verslaving",
+    mindsetKey:"categorieen/mindset",
+    mindfulnessKey:"categorieen/mindfulness",
+    highsensitivityKey:"categorieen/hoogsensitiviteit",
+    severePanicAttackBlogKey: "blog/zo-een-erge-paniek-aanval-heb-ik-allang-niet-meer-gehad",
+    outofbodyexperienceBlogKey: "blog/out-of-body-ervaring",
+    takingresponsibilityemotionsBlogKey: "blog/verantwoordelijkheid-eigen-emoties-voelen-en-nemen",
+    christmasmarketpanicattackBlogKey: "blog/kerstmarkten-walhalla-voor-hoog-sensitieve-personen-met-paniek-aanvallen"
   },
 } as const;
