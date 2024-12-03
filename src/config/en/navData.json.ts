@@ -24,7 +24,7 @@ import { type navItem } from "../types/configDataTypes";
 const navConfig: navItem[] = [
   {
     text: "Home",
-    link: "http://127.0.0.1:4321/", // wordt https://feelgoodbrothers.com/
+    link: "https://feelgoodbrothers.com"
   },
   {
     text: "About us",

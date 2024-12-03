@@ -21,13 +21,16 @@ const currLocale = getLocaleFromUrl(Astro.url);
 
 const domain = import.meta.env.SITE; // pulls from astro.config.mjs
 let actualLink: string;
-if (!link.includes(domain) && !link.startsWith("/") && !link.startsWith("#")) {
+if (text === "Home") {
+  actualLink = link;
+} else {if (!link.includes(domain) && !link.startsWith("/") && !link.startsWith("#")) {
   // it is an external link
   actualLink = link;
 } else {
   // internal link, so we need to add the locale to the link
   actualLink = getRelativeLocaleUrl(currLocale, link);
-}
+}}
+
 // remove trailing slash so IDs will work
 if (actualLink.endsWith("/")) {
   actualLink = actualLink.slice(0, -1);

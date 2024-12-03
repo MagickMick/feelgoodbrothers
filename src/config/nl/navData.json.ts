@@ -20,11 +20,12 @@ const processedCategories = sortByValue(countedCategories);
 // types
 import { type navItem } from "../types/configDataTypes";
 
+
 // note: 1 level of dropdown is supported
 const navConfig: navItem[] = [
   {
     text: "Home",
-    link: "http://127.0.0.1:4321/nl/", // wordt https://feelgoodbrothers.com/nl/
+    link: "https://feelgoodbrothers.com/nl/"
   },
   {
     text: "Over ons",

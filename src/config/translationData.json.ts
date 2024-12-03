@@ -94,7 +94,8 @@ export const routeTranslations = {
     severePanicAttackBlogKey: "blog/have-not-had-such-a-severe-panic-attack-in-a-long-time",
     outofbodyexperienceBlogKey: "blog/out-of-body-experience",
     takingresponsibilityemotionsBlogKey: "blog/feeling-and-taking-responsibility-for-your-own-emotions",
-    christmasmarketpanicattackBlogKey: "blog/christmas-markets-paradise-for-high-sensitive-people-with-panic-attacks"
+    christmasmarketpanicattackBlogKey: "blog/christmas-markets-paradise-for-high-sensitive-people-with-panic-attacks",
+    scaredoffaintingpanicattackBlogKey: "blog/scared-to-pass-out-while-have-a-panic-attack"
   },
   nl: {
     aboutKey: "over-ons",
@@ -103,7 +104,7 @@ export const routeTranslations = {
     depressionKey:"categorieen/depressie",
     panicattacksKey:"categorieen/paniek-aanvallen",
     meditationKey:"categorieen/meditatie",
-    derealisationKey:"categorieens/derealisatie",
+    derealisationKey:"categorieen/derealisatie",
     addicationKey:"categorieen/verslaving",
     mindsetKey:"categorieen/mindset",
     mindfulnessKey:"categorieen/mindfulness",
@@ -111,6 +112,7 @@ export const routeTranslations = {
     severePanicAttackBlogKey: "blog/zo-een-erge-paniek-aanval-heb-ik-allang-niet-meer-gehad",
     outofbodyexperienceBlogKey: "blog/out-of-body-ervaring",
     takingresponsibilityemotionsBlogKey: "blog/verantwoordelijkheid-eigen-emoties-voelen-en-nemen",
-    christmasmarketpanicattackBlogKey: "blog/kerstmarkten-walhalla-voor-hoog-sensitieve-personen-met-paniek-aanvallen"
+    christmasmarketpanicattackBlogKey: "blog/kerstmarkten-walhalla-voor-hoog-sensitieve-personen-met-paniek-aanvallen",
+    scaredoffaintingpanicattackBlogKey: "blog/bang-voor-flauwvallen-tijdens-paniekaanval"
   },
 } as const;
