@@ -17,5 +17,10 @@
       "@/*": ["src/*"]
     },
     "jsxImportSource": "react"
+  },
+    "disqus": {
+      "enable": true,
+      "shortname": "feelgoodbrothers-template",
+      "settings": {}
   }
 }
