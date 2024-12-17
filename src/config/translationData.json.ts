@@ -86,7 +86,7 @@ export const routeTranslations = {
     depressionKey:"categories/depression",
     panicattacksKey:"categories/panic-attacks",
     meditationKey:"categories/meditation",
-    derealisationKey:"categories/derealisation",
+    derealizationKey:"categories/derealization",
     addicationKey:"categories/addication",
     mindsetKey:"categories/mindset",
     mindfulnessKey:"categories/mindfulness",
@@ -95,7 +95,9 @@ export const routeTranslations = {
     outofbodyexperienceBlogKey: "blog/out-of-body-experience",
     takingresponsibilityemotionsBlogKey: "blog/feeling-and-taking-responsibility-for-your-own-emotions",
     christmasmarketpanicattackBlogKey: "blog/christmas-markets-paradise-for-high-sensitive-people-with-panic-attacks",
-    scaredoffaintingpanicattackBlogKey: "blog/scared-to-pass-out-while-have-a-panic-attack"
+    scaredoffaintingpanicattackBlogKey: "blog/scared-to-pass-out-while-have-a-panic-attack",
+    panicattackwhendrivingBlogKey: "blog/panic-attacks-when-driving",
+    mindfulltroughyogaBlogKey: "blog/living-life-with-mindfulness"
   },
   nl: {
     aboutKey: "over-ons",
@@ -104,7 +106,7 @@ export const routeTranslations = {
     depressionKey:"categorieen/depressie",
     panicattacksKey:"categorieen/paniek-aanvallen",
     meditationKey:"categorieen/meditatie",
-    derealisationKey:"categorieen/derealisatie",
+    derealizationKey:"categorieen/derealisatie",
     addicationKey:"categorieen/verslaving",
     mindsetKey:"categorieen/mindset",
     mindfulnessKey:"categorieen/mindfulness",
@@ -113,6 +115,8 @@ export const routeTranslations = {
     outofbodyexperienceBlogKey: "blog/out-of-body-ervaring",
     takingresponsibilityemotionsBlogKey: "blog/verantwoordelijkheid-eigen-emoties-voelen-en-nemen",
     christmasmarketpanicattackBlogKey: "blog/kerstmarkten-walhalla-voor-hoog-sensitieve-personen-met-paniek-aanvallen",
-    scaredoffaintingpanicattackBlogKey: "blog/bang-voor-flauwvallen-tijdens-paniekaanval"
+    scaredoffaintingpanicattackBlogKey: "blog/bang-voor-flauwvallen-tijdens-paniekaanval",
+    panicattackwhendrivingBlogKey: "blog/paniekaanval-tijdens-het-auto-rijden",
+    mindfulltroughyogaBlogKey: "blog/met-mindfulness-door-het-leven"
   },
 } as const;
