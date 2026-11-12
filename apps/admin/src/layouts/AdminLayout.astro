@@ -13,6 +13,7 @@ const siteUrl = process.env.SITE_URL ?? "https://feelgoodbrothers.com";
 
 const nav = [
   { href: "/", label: "Blogs", match: (p: string) => p === "/" || p.startsWith("/posts") },
+  { href: "/ai/", label: "✨ Schrijfhulp", match: (p: string) => p.startsWith("/ai") || p.startsWith("/situations") },
   { href: "/authors/", label: "Auteurs", match: (p: string) => p.startsWith("/authors") },
   { href: "/categories/", label: "Categorieën", match: (p: string) => p.startsWith("/categories") },
   { href: "/media/", label: "Media", match: (p: string) => p.startsWith("/media") },

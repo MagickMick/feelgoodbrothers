@@ -18,6 +18,7 @@ import {
 import { categoryPath, postPath } from "./posts.ts";
 import { slugify } from "./text.ts";
 import { deleteImageFiles, processImage } from "./storage.ts";
+import { countPlaceholders } from "./ai/prompts.ts";
 import { notifyContentChanged } from "./notify.ts";
 
 export class ValidationError extends Error {
@@ -84,6 +85,9 @@ function validate(input: PostInput): void {
     if (!input.description.trim()) errors.description = "Omschrijving is verplicht om te publiceren";
     if (!input.body.trim()) errors.body = "De blog is nog leeg";
     if (!input.heroId) errors.heroId = "Kies een hoofdafbeelding om te publiceren";
+    const open = countPlaceholders(`${input.title}\n${input.description}\n${input.body}`);
+    if (open > 0)
+      errors.body = `Er ${open === 1 ? "staat nog 1 invulpunt" : `staan nog ${open} invulpunten`} [[...]] in de tekst. Vul ze in of haal ze weg voor je publiceert.`;
   }
   if (input.kind === "guest") {
     if (input.guestName.length > 40) errors.guestName = "Houd het bij een voornaam of pseudoniem (max 40 tekens)";

@@ -15,6 +15,13 @@ x-app-env: &app-env
   INDEXNOW_KEY: ${INDEXNOW_KEY:-}
   UPLOADS_DIR: /data/uploads
 
+x-ai-env: &ai-env
+  AI_PROVIDER: ${AI_PROVIDER:-openai}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENAI_MODEL: ${OPENAI_MODEL:-}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+
 # zero-downtime rolling updates: start the new container before stopping the old one
 x-rolling: &rolling
   update_config:
@@ -74,7 +81,9 @@ services:
 
   admin:
     image: magickmick/feelgoodbrothers-admin:${TAG:-latest}
-    environment: *app-env
+    # only the admin gets the AI keys
+    environment:
+      <<: [*app-env, *ai-env]
     volumes:
       - /opt/feelgoodbrothers/uploads:/data/uploads
     deploy:

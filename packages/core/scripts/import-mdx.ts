@@ -14,6 +14,7 @@ import { getDb, closeDb } from "../src/db.ts";
 import { runMigrations } from "../src/migrate.ts";
 import { authors, categories, media, postCategories, posts, type Locale } from "../src/schema.ts";
 import { processImage } from "../src/storage.ts";
+import { seedSituations } from "../src/ai/situations-seed.ts";
 
 const SEED = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../seed");
 
@@ -154,6 +155,8 @@ async function main() {
     }
   }
   console.log(`✓ imported ${imported} posts (${skipped} already existed)`);
+  const seeded = await seedSituations();
+  if (seeded) console.log(`✓ ${seeded} situations for the writing assistant`);
 }
 
 try {

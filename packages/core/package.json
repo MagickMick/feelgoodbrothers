@@ -15,7 +15,10 @@
     "./notify": "./src/notify.ts",
     "./migrate": "./src/migrate.ts",
     "./admin": "./src/admin.ts",
-    "./time": "./src/time.ts"
+    "./time": "./src/time.ts",
+    "./ai": "./src/ai/service.ts",
+    "./ai/prompts": "./src/ai/prompts.ts",
+    "./ai/provider": "./src/ai/provider.ts"
   },
   "scripts": {
     "db:generate": "drizzle-kit generate",
@@ -25,10 +28,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
     "@node-rs/argon2": "^2.2.2",
     "drizzle-orm": "^0.45.4",
     "gray-matter": "^4.0.3",
     "marked": "^18.2.0",
+    "openai": "^7.55.0",
     "postgres": "^3.4.9",
     "sanitize-html": "^2.17.0",
     "sharp": "^0.35.5"

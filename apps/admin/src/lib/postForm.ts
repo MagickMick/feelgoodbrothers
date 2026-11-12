@@ -60,6 +60,7 @@ export function toEditorPost(p: PostWithRelations): EditorPost {
     canonicalUrl: p.canonicalUrl ?? "",
     noindex: p.noindex,
     translationGroup: p.translationGroup,
+    aiDraftBody: p.aiDraftBody,
   };
 }
 
@@ -95,5 +96,6 @@ export function inputToEditorPost(
     canonicalUrl: input.canonicalUrl,
     noindex: input.noindex,
     translationGroup: input.translationGroup,
+    aiDraftBody: base.aiDraftBody ?? null,
   };
 }

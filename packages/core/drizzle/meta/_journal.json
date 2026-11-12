@@ -15,6 +15,13 @@
       "when": 1794491471644,
       "tag": "0001_guest_posts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794493991797,
+      "tag": "0002_ai_assistant",
+      "breakpoints": true
     }
   ]
 }

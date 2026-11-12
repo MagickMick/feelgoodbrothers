@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -105,6 +106,9 @@ export const posts = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     /** last meaningful content change, used for dateModified / sitemap lastmod */
     contentUpdatedAt: timestamp("content_updated_at", { withTimezone: true }),
+    /** AI writing assistant: the session this draft came from and the original AI text (marks the post as an AI draft) */
+    aiSessionId: integer("ai_session_id"),
+    aiDraftBody: text("ai_draft_body"),
   },
   (t) => [
     uniqueIndex("posts_locale_slug_idx").on(t.locale, t.slug),
@@ -126,6 +130,57 @@ export const postCategories = pgTable(
   },
   (t) => [primaryKey({ columns: [t.postId, t.categoryId] })],
 );
+
+// ---------------------------------------------------------------------------
+// AI writing assistant
+// ---------------------------------------------------------------------------
+/** recognisable situations per category ("packed concert", "long line at the supermarket") */
+export const situations = pgTable(
+  "situations",
+  {
+    id: serial("id").primaryKey(),
+    categoryId: integer("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    labelEn: text("label_en").notNull(),
+    labelNl: text("label_nl").notNull(),
+    hintEn: text("hint_en").notNull().default(""),
+    hintNl: text("hint_nl").notNull().default(""),
+    active: boolean("active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [index("situations_category_idx").on(t.categoryId)],
+);
+
+export interface AiMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AiSessionParams {
+  categoryIds: number[];
+  situationId: number | null;
+  situationText: string;
+  persona: string;
+  length: "short" | "medium" | "long";
+  helps: string;
+  wishes: string;
+  placeholders: boolean;
+}
+
+export const aiSessions = pgTable("ai_sessions", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").references(() => posts.id, { onDelete: "set null" }),
+  locale: localeEnum("locale").notNull(),
+  params: jsonb("params").$type<AiSessionParams>().notNull(),
+  messages: jsonb("messages").$type<AiMessage[]>().notNull().default([]),
+  provider: text("provider").notNull(),
+  model: text("model").notNull(),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 // ---------------------------------------------------------------------------
 // redirects: 301s for changed slugs (filled automatically by the admin)
@@ -190,3 +245,6 @@ export type Author = typeof authors.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type Media = typeof media.$inferSelect;
 export type AdminUser = typeof adminUsers.$inferSelect;
+
+export type Situation = typeof situations.$inferSelect;
+export type AiSession = typeof aiSessions.$inferSelect;
