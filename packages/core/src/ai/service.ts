@@ -177,14 +177,30 @@ export async function runTurn(
   const stream = await streamChat(useProvider, { system, messages: history, maxTokens: MAX_OUTPUT_TOKENS });
 
   let full = "";
+  let finishText!: () => void;
+  let failText!: (reason: unknown) => void;
+  const textFinished = new Promise<void>((resolve, reject) => {
+    finishText = resolve;
+    failText = reject;
+  });
   async function* text() {
-    for await (const chunk of stream.text) {
-      full += chunk;
-      yield chunk;
+    let completed = false;
+    try {
+      for await (const chunk of stream.text) {
+        full += chunk;
+        yield chunk;
+      }
+      completed = true;
+    } catch (err) {
+      failText(err);
+      throw err;
+    } finally {
+      if (completed) finishText();
+      else failText(new AiError("De generatie is afgebroken."));
     }
   }
   const done = (async () => {
-    const usage = await stream.usage;
+    const [usage] = await Promise.all([stream.usage, textFinished]);
     if (!full.trim()) throw new AiError("De AI gaf een leeg antwoord. Probeer het opnieuw.");
     await getDb()
       .update(aiSessions)
