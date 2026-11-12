@@ -185,6 +185,23 @@ export const aiSessions = pgTable("ai_sessions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** one row per AI call (generate, revise, translate): the source for usage reporting */
+export const aiUsage = pgTable(
+  "ai_usage",
+  {
+    id: serial("id").primaryKey(),
+    sessionId: integer("session_id").references(() => aiSessions.id, { onDelete: "set null" }),
+    postId: integer("post_id").references(() => posts.id, { onDelete: "set null" }),
+    kind: text("kind").$type<"generate" | "revise" | "translate">().notNull(),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ai_usage_created_idx").on(t.createdAt)],
+);
+
 // ---------------------------------------------------------------------------
 // redirects: 301s for changed slugs (filled automatically by the admin)
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import { and, asc, desc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-o
 import { getDb } from "../db.ts";
 import {
   aiSessions,
+  aiUsage,
   categories,
   postCategories,
   posts,
@@ -134,16 +135,44 @@ export async function listRecentSessions(limit = 15) {
   return getDb().select().from(aiSessions).orderBy(desc(aiSessions.updatedAt)).limit(limit);
 }
 
+/** AI usage in a period, from the per-call ai_usage rows (not the lifetime session counters) */
 export async function usageSince(since: Date) {
   const [row] = await getDb()
     .select({
-      sessions: sql<number>`count(*)::int`,
-      inputTokens: sql<number>`coalesce(sum(${aiSessions.inputTokens}), 0)::int`,
-      outputTokens: sql<number>`coalesce(sum(${aiSessions.outputTokens}), 0)::int`,
+      calls: sql<number>`count(*)::int`,
+      inputTokens: sql<number>`coalesce(sum(${aiUsage.inputTokens}), 0)::int`,
+      outputTokens: sql<number>`coalesce(sum(${aiUsage.outputTokens}), 0)::int`,
     })
-    .from(aiSessions)
-    .where(gte(aiSessions.createdAt, since));
+    .from(aiUsage)
+    .where(gte(aiUsage.createdAt, since));
   return row;
+}
+
+/**
+ * Record the tokens of one AI call once the provider reports them. Runs
+ * independently of whether the turn is saved: failed or aborted calls still cost tokens.
+ */
+function recordUsage(
+  usage: Promise<AiUsage>,
+  meta: { kind: "generate" | "revise" | "translate"; provider: AiProviderName; sessionId?: number; postId?: number },
+): void {
+  usage
+    .then((u) =>
+      getDb()
+        .insert(aiUsage)
+        .values({
+          kind: meta.kind,
+          provider: meta.provider,
+          model: u.model,
+          inputTokens: u.inputTokens,
+          outputTokens: u.outputTokens,
+          sessionId: meta.sessionId ?? null,
+          postId: meta.postId ?? null,
+        }),
+    )
+    .catch((err) => {
+      if (!(err instanceof AiError)) console.error("[ai] could not record usage", err);
+    });
 }
 
 /**
@@ -159,16 +188,7 @@ export async function runTurn(
   // claim the session atomically before calling the AI, so a second tab can't
   // start a parallel turn (which would overwrite this one and cost tokens twice)
   const lock = randomUUID();
-  const [session] = await db
-    .update(aiSessions)
-    .set({ turnLock: lock, turnStartedAt: new Date() })
-    .where(
-      and(
-        eq(aiSessions.id, sessionId),
-        or(isNull(aiSessions.turnLock), lt(aiSessions.turnStartedAt, new Date(Date.now() - TURN_LOCK_MS))),
-      ),
-    )
-    .returning();
+  const session = await claimSession(sessionId, lock);
   if (!session) {
     if (!(await getSession(sessionId))) throw new AiError("Sessie niet gevonden");
     throw new AiError("Er loopt al een AI-beurt voor deze opzet (misschien in een ander tabblad). Wacht tot die klaar is.");
@@ -217,6 +237,11 @@ async function startTurn(
   const history: AiMessage[] = [...session.messages, { role: "user", content: userMessage }];
   const system = buildSystemPrompt(locale, await voiceSamples(locale), session.params.placeholders);
   const stream = await streamChat(useProvider, { system, messages: history, maxTokens: MAX_OUTPUT_TOKENS });
+  recordUsage(stream.usage, {
+    kind: session.messages.length === 0 ? "generate" : "revise",
+    provider: useProvider,
+    sessionId,
+  });
 
   let full = "";
   let finishText!: () => void;
@@ -279,63 +304,98 @@ export function latestDraft(session: AiSession) {
   return last ? parseDraft(last.content) : null;
 }
 
-/** save the latest draft as a post draft and return its id */
-export async function saveSessionAsDraft(sessionId: number, authorId: number | null): Promise<number> {
-  const session = await getSession(sessionId);
-  if (!session) throw new AiError("Sessie niet gevonden");
-  if (session.postId) return session.postId;
-  const draft = latestDraft(session);
-  if (!draft?.body) throw new AiError("Er is nog geen opzet om op te slaan.");
-
-  // make the slug unique in this locale
-  const db = getDb();
-  const base = slugify(draft.slug || draft.title) || `concept-${sessionId}`;
-  let slug = base;
-  for (let n = 2; ; n++) {
-    const [clash] = await db
-      .select({ id: posts.id })
-      .from(posts)
-      .where(and(eq(posts.locale, session.locale), eq(posts.slug, slug)));
-    if (!clash) break;
-    slug = `${base}-${n}`;
-  }
-
-  const id = await savePost(null, {
-    locale: session.locale,
-    title: draft.title || "AI-opzet",
-    slug,
-    description: draft.description,
-    body: draft.body,
-    heroId: null,
-    heroAlt: draft.heroAlt,
-    authorId,
-    kind: "team",
-    guestName: "",
-    guestEmail: "",
-    guestConsentAt: null,
-    guestNote: "",
-    categoryIds: session.params.categoryIds,
-    action: "draft",
-    publishAt: null,
-    seoTitle: "",
-    metaDescription: "",
-    canonicalUrl: "",
-    noindex: false,
-  });
-  await db.update(posts).set({ aiSessionId: sessionId, aiDraftBody: draft.body }).where(eq(posts.id, id));
-  // link only if no other request saved this session in the meantime (double click / two tabs)
-  const linked = await db
+/** try to take the per-session lock; returns the session row or null when someone else holds it */
+async function claimSession(sessionId: number, lock: string): Promise<AiSession | null> {
+  const [row] = await getDb()
     .update(aiSessions)
-    .set({ postId: id, updatedAt: new Date() })
-    .where(and(eq(aiSessions.id, sessionId), isNull(aiSessions.postId)))
-    .returning({ id: aiSessions.id });
-  if (linked.length === 0) {
-    await db.delete(posts).where(eq(posts.id, id));
+    .set({ turnLock: lock, turnStartedAt: new Date() })
+    .where(
+      and(
+        eq(aiSessions.id, sessionId),
+        or(isNull(aiSessions.turnLock), lt(aiSessions.turnStartedAt, new Date(Date.now() - TURN_LOCK_MS))),
+      ),
+    )
+    .returning();
+  return row ?? null;
+}
+
+function isSlugConflict(err: unknown): boolean {
+  if (err instanceof ValidationError) return Boolean(err.fields.slug);
+  const cause = (err as { cause?: { code?: string } })?.cause;
+  return cause?.code === "23505";
+}
+
+/**
+ * Save the latest draft as a post draft and return its id.
+ * Uses the session lock, so a double click or a second tab gets the same post
+ * back, and you can't save while the AI is still writing.
+ */
+export async function saveSessionAsDraft(sessionId: number, authorId: number | null): Promise<number> {
+  const db = getDb();
+  const lock = randomUUID();
+  let session: AiSession | null = null;
+  for (let attempt = 0; attempt < 25 && !session; attempt++) {
+    session = await claimSession(sessionId, lock);
+    if (session) break;
     const current = await getSession(sessionId);
-    if (current?.postId) return current.postId;
-    throw new AiError("Opslaan is mislukt. Probeer het opnieuw.");
+    if (!current) throw new AiError("Sessie niet gevonden");
+    if (current.postId) return current.postId; // saved by the other request
+    await new Promise((r) => setTimeout(r, 200));
   }
-  return id;
+  if (!session) throw new AiError("De AI is nog bezig met deze opzet. Wacht tot hij klaar is en probeer het opnieuw.");
+
+  try {
+    if (session.postId) return session.postId;
+    const draft = latestDraft(session);
+    if (!draft?.body) throw new AiError("Er is nog geen opzet om op te slaan.");
+
+    const base = slugify(draft.slug || draft.title) || `concept-${sessionId}`;
+    let id: number | null = null;
+    for (let n = 1; id === null; n++) {
+      const slug = n === 1 ? base : `${base}-${n}`;
+      const [clash] = await db
+        .select({ id: posts.id })
+        .from(posts)
+        .where(and(eq(posts.locale, session.locale), eq(posts.slug, slug)));
+      if (clash) continue;
+      try {
+        id = await savePost(null, {
+          locale: session.locale,
+          title: draft.title || "AI-opzet",
+          slug,
+          description: draft.description,
+          body: draft.body,
+          heroId: null,
+          heroAlt: draft.heroAlt,
+          authorId,
+          kind: "team",
+          guestName: "",
+          guestEmail: "",
+          guestConsentAt: null,
+          guestNote: "",
+          categoryIds: session.params.categoryIds,
+          action: "draft",
+          publishAt: null,
+          seoTitle: "",
+          metaDescription: "",
+          canonicalUrl: "",
+          noindex: false,
+        });
+      } catch (err) {
+        // someone else took this slug between our check and the insert: try the next one
+        if (isSlugConflict(err) && n < 20) continue;
+        throw err;
+      }
+    }
+    await db.update(posts).set({ aiSessionId: sessionId, aiDraftBody: draft.body }).where(eq(posts.id, id));
+    await db.update(aiSessions).set({ postId: id, updatedAt: new Date() }).where(eq(aiSessions.id, sessionId));
+    return id;
+  } finally {
+    await db
+      .update(aiSessions)
+      .set({ turnLock: null, turnStartedAt: null })
+      .where(and(eq(aiSessions.id, sessionId), eq(aiSessions.turnLock, lock)));
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -361,9 +421,10 @@ export async function translatePostWithAi(postId: number, provider: AiProviderNa
     messages: [{ role: "user", content: buildTranslateMessage(source) }],
     maxTokens: MAX_OUTPUT_TOKENS,
   });
+  recordUsage(stream.usage, { kind: "translate", provider, postId });
   let full = "";
   for await (const chunk of stream.text) full += chunk;
-  const usage = await stream.usage;
+  await stream.usage; // surfaces provider errors after the text
   const draft = parseDraft(full);
   if (!draft.body) throw new AiError("De vertaling is mislukt (leeg antwoord). Probeer het opnieuw.");
 
@@ -398,25 +459,5 @@ export async function translatePostWithAi(postId: number, provider: AiProviderNa
   const catIds = source.postCategories.map((pc) => pc.categoryId);
   if (catIds.length) await db.insert(postCategories).values(catIds.map((categoryId) => ({ postId: row.id, categoryId })));
 
-  // log the tokens as a small session so monthly usage stays complete
-  await db.insert(aiSessions).values({
-    postId: row.id,
-    locale: target,
-    params: {
-      categoryIds: catIds,
-      situationId: null,
-      situationText: `Vertaling van post ${postId}`,
-      persona: "",
-      length: "medium",
-      helps: "",
-      wishes: "",
-      placeholders: false,
-    },
-    messages: [],
-    provider,
-    model: usage.model,
-    inputTokens: usage.inputTokens,
-    outputTokens: usage.outputTokens,
-  });
   return row.id;
 }

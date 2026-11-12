@@ -29,6 +29,13 @@
       "when": 1794499685984,
       "tag": "0003_ai_turn_lock",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794500071133,
+      "tag": "0004_ai_usage",
+      "breakpoints": true
     }
   ]
 }

@@ -4,7 +4,7 @@ import AiStudio from "@/components/AiStudio";
 import { getSession, listRecentSessions, listSituations, usageSince } from "@fgb/core/ai";
 import { availableProviders, defaultProvider, modelFor, PROVIDER_LABELS } from "@fgb/core/ai/provider";
 import { getAllCategories } from "@fgb/core/posts";
-import { formatDateTime } from "@fgb/core/time";
+import { ADMIN_TZ, formatDateTime, localInputToDate } from "@fgb/core/time";
 import { parseDraft } from "@fgb/core/ai/prompts";
 
 const [categories, situations, recent] = await Promise.all([
@@ -12,7 +12,9 @@ const [categories, situations, recent] = await Promise.all([
   listSituations({ activeOnly: true }),
   listRecentSessions(12),
 ]);
-const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+// start of the current month in the editor's timezone (the server runs in UTC)
+const ym = new Intl.DateTimeFormat("en-CA", { timeZone: ADMIN_TZ, year: "numeric", month: "2-digit" }).format(new Date());
+const monthStart = localInputToDate(`${ym}-01T00:00`)!;
 const usage = await usageSince(monthStart);
 
 const providers = availableProviders().map((id) => ({ id, label: `${PROVIDER_LABELS[id]} (${modelFor(id)})`, model: modelFor(id) }));
@@ -58,7 +60,7 @@ function sessionTitle(content: string | undefined) {
       </p>
     </div>
     <p class="text-xs text-gray-500">
-      Deze maand: {usage.sessions} sessies · {(usage.inputTokens / 1000).toFixed(1)}k in / {(usage.outputTokens / 1000).toFixed(1)}k uit tokens
+      Deze maand: {usage.calls} AI-aanroepen · {(usage.inputTokens / 1000).toFixed(1)}k in / {(usage.outputTokens / 1000).toFixed(1)}k uit tokens
     </p>
   </div>
 
