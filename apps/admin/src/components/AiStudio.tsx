@@ -146,7 +146,12 @@ export default function AiStudio({ categories, situations, providers, defaultPro
       window.history.replaceState(null, "", `/ai/?session=${json.sessionId}`);
       await streamTurn(json.sessionId, null);
     } catch (err) {
-      if ((err as Error).name !== "AbortError") setError((err as Error).message);
+      if ((err as Error).name !== "AbortError") {
+        setRaw("");
+        setSessionId(null);
+        window.history.replaceState(null, "", "/ai/");
+        setError((err as Error).message);
+      }
     } finally {
       setBusy("");
     }
