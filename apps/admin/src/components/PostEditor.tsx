@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { marked } from "marked";
+import { useEffect, useRef, useState } from "react";
+import { renderPreview } from "@/lib/safeMarkdown";
 import { countPlaceholders } from "@fgb/core/ai/prompts";
 
 export interface EditorPost {
@@ -112,7 +112,11 @@ export default function PostEditor({ post, authors, categories, errors, siteUrl,
   const words = wordCount(body);
   const placeholdersOpen = countPlaceholders(`${title}\n${description}\n${body}`);
   const isAiDraft = Boolean(post.aiDraftBody);
-  const previewHtml = useMemo(() => (tab === "preview" ? (marked.parse(body, { async: false }) as string) : ""), [body, tab]);
+  // sanitized preview, built in the browser only (see lib/safeMarkdown.ts)
+  const [previewHtml, setPreviewHtml] = useState("");
+  useEffect(() => {
+    if (tab === "preview") setPreviewHtml(renderPreview(body));
+  }, [body, tab]);
 
   const checks: { ok: boolean; text: string }[] = [
     { ok: fullTitle.length >= 30 && fullTitle.length <= 65, text: `SEO-titel 30-65 tekens (nu ${fullTitle.length})` },

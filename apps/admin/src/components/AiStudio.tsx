@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { marked } from "marked";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { renderPreview } from "@/lib/safeMarkdown";
 import { countPlaceholders, parseDraft } from "@fgb/core/ai/prompts";
 
 interface Category {
@@ -66,7 +66,9 @@ export default function AiStudio({ categories, situations, providers, defaultPro
   const abortRef = useRef<AbortController | null>(null);
 
   const draft = useMemo(() => parseDraft(raw), [raw]);
-  const html = useMemo(() => (draft.body ? (marked.parse(draft.body, { async: false }) as string) : ""), [draft.body]);
+  // sanitized preview, built in the browser only (see lib/safeMarkdown.ts)
+  const [html, setHtml] = useState("");
+  useEffect(() => setHtml(renderPreview(draft.body, { highlightPlaceholders: true })), [draft.body]);
   const words = draft.body ? draft.body.split(/\s+/).filter(Boolean).length : 0;
   const openPlaceholders = countPlaceholders(draft.body);
 
@@ -419,9 +421,7 @@ export default function AiStudio({ categories, situations, providers, defaultPro
               {draft.heroAlt && <p className="mt-1 text-xs text-gray-400">📷 Foto-idee: {draft.heroAlt}</p>}
               <div
                 className="prose prose-lg mt-6 max-w-none [&_p]:leading-relaxed"
-                dangerouslySetInnerHTML={{
-                  __html: html.replace(/\[\[([^\]]*)\]\]/g, '<mark class="rounded bg-amber-100 px-1 text-amber-900">[[$1]]</mark>'),
-                }}
+                dangerouslySetInnerHTML={{ __html: html }}
               />
             </>
           )}
