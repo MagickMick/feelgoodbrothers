@@ -6,7 +6,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export function streamMock(input: StreamChatInput): AiStream {
   const last = input.messages[input.messages.length - 1]?.content ?? "";
   const revision = input.messages.length > 1;
-  const nl = /Write the draft in Dutch/.test(input.system) || /Translate .* into Dutch/.test(input.system);
+  const nl = /Write the draft in Dutch/.test(input.system) || /Translate into Dutch/.test(input.system);
   const text = nl
     ? `TITLE: ${revision ? "Paniek in de rij bij de supermarkt (herzien)" : "Paniek in de rij bij de supermarkt"}
 DESCRIPTION: Een persoonlijk verhaal over een paniekaanval in een lange rij bij de supermarkt, en wat mij hielp om er doorheen te komen zonder weg te rennen.
