@@ -1,7 +1,8 @@
 /**
  * Writing assistant: sessions, streaming turns, saving drafts, AI translation.
  */
-import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, asc, desc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { getDb } from "../db.ts";
 import {
   aiSessions,
@@ -29,6 +30,8 @@ import {
 } from "./prompts.ts";
 
 export const MAX_TURNS = 20;
+/** a lock older than this is treated as abandoned (crashed request) */
+const TURN_LOCK_MS = 5 * 60 * 1000;
 const MAX_OUTPUT_TOKENS = 16000; // reasoning models count thinking tokens here too
 
 // ---------------------------------------------------------------------------
@@ -152,8 +155,47 @@ export async function runTurn(
   feedback: string | null,
   provider?: AiProviderName,
 ): Promise<{ text: AsyncGenerator<string>; done: Promise<AiUsage> }> {
-  const session = await getSession(sessionId);
-  if (!session) throw new AiError("Sessie niet gevonden");
+  const db = getDb();
+  // claim the session atomically before calling the AI, so a second tab can't
+  // start a parallel turn (which would overwrite this one and cost tokens twice)
+  const lock = randomUUID();
+  const [session] = await db
+    .update(aiSessions)
+    .set({ turnLock: lock, turnStartedAt: new Date() })
+    .where(
+      and(
+        eq(aiSessions.id, sessionId),
+        or(isNull(aiSessions.turnLock), lt(aiSessions.turnStartedAt, new Date(Date.now() - TURN_LOCK_MS))),
+      ),
+    )
+    .returning();
+  if (!session) {
+    if (!(await getSession(sessionId))) throw new AiError("Sessie niet gevonden");
+    throw new AiError("Er loopt al een AI-beurt voor deze opzet (misschien in een ander tabblad). Wacht tot die klaar is.");
+  }
+  const release = () =>
+    db
+      .update(aiSessions)
+      .set({ turnLock: null, turnStartedAt: null })
+      .where(and(eq(aiSessions.id, sessionId), eq(aiSessions.turnLock, lock)))
+      .catch(() => undefined);
+
+  try {
+    return await startTurn(session, lock, release, feedback, provider);
+  } catch (err) {
+    await release();
+    throw err;
+  }
+}
+
+async function startTurn(
+  session: AiSession,
+  lock: string,
+  release: () => Promise<unknown>,
+  feedback: string | null,
+  provider?: AiProviderName,
+): Promise<{ text: AsyncGenerator<string>; done: Promise<AiUsage> }> {
+  const sessionId = session.id;
   const turns = session.messages.filter((m) => m.role === "user").length;
   if (turns >= MAX_TURNS) throw new AiError(`Maximaal ${MAX_TURNS} beurten per sessie. Start een nieuwe opzet.`);
 
@@ -200,20 +242,32 @@ export async function runTurn(
     }
   }
   const done = (async () => {
-    const [usage] = await Promise.all([stream.usage, textFinished]);
-    if (!full.trim()) throw new AiError("De AI gaf een leeg antwoord. Probeer het opnieuw.");
-    await getDb()
-      .update(aiSessions)
-      .set({
-        messages: [...history, { role: "assistant", content: full }],
-        provider: useProvider,
-        model: usage.model,
-        inputTokens: sql`${aiSessions.inputTokens} + ${usage.inputTokens}`,
-        outputTokens: sql`${aiSessions.outputTokens} + ${usage.outputTokens}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(aiSessions.id, sessionId));
-    return usage;
+    try {
+      const [usage] = await Promise.all([stream.usage, textFinished]);
+      if (!full.trim()) throw new AiError("De AI gaf een leeg antwoord. Probeer het opnieuw.");
+      // only save while we still hold the lock (it can expire after TURN_LOCK_MS)
+      const saved = await getDb()
+        .update(aiSessions)
+        .set({
+          messages: [...history, { role: "assistant", content: full }],
+          provider: useProvider,
+          model: usage.model,
+          inputTokens: sql`${aiSessions.inputTokens} + ${usage.inputTokens}`,
+          outputTokens: sql`${aiSessions.outputTokens} + ${usage.outputTokens}`,
+          turnLock: null,
+          turnStartedAt: null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(aiSessions.id, sessionId), eq(aiSessions.turnLock, lock)))
+        .returning({ id: aiSessions.id });
+      if (saved.length === 0) {
+        throw new AiError("Deze beurt is niet opgeslagen omdat de opzet intussen is gewijzigd. Herlaad de pagina.");
+      }
+      return usage;
+    } catch (err) {
+      await release();
+      throw err;
+    }
   })();
   done.catch(() => undefined);
   return { text: text(), done };
@@ -269,7 +323,18 @@ export async function saveSessionAsDraft(sessionId: number, authorId: number | n
     noindex: false,
   });
   await db.update(posts).set({ aiSessionId: sessionId, aiDraftBody: draft.body }).where(eq(posts.id, id));
-  await db.update(aiSessions).set({ postId: id, updatedAt: new Date() }).where(eq(aiSessions.id, sessionId));
+  // link only if no other request saved this session in the meantime (double click / two tabs)
+  const linked = await db
+    .update(aiSessions)
+    .set({ postId: id, updatedAt: new Date() })
+    .where(and(eq(aiSessions.id, sessionId), isNull(aiSessions.postId)))
+    .returning({ id: aiSessions.id });
+  if (linked.length === 0) {
+    await db.delete(posts).where(eq(posts.id, id));
+    const current = await getSession(sessionId);
+    if (current?.postId) return current.postId;
+    throw new AiError("Opslaan is mislukt. Probeer het opnieuw.");
+  }
   return id;
 }
 

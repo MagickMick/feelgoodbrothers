@@ -178,6 +178,9 @@ export const aiSessions = pgTable("ai_sessions", {
   model: text("model").notNull(),
   inputTokens: integer("input_tokens").notNull().default(0),
   outputTokens: integer("output_tokens").notNull().default(0),
+  /** per-session lock so two tabs can't run a turn at the same time (token of the running turn) */
+  turnLock: text("turn_lock"),
+  turnStartedAt: timestamp("turn_started_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
