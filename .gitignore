@@ -21,3 +21,13 @@ pnpm-debug.log*
 
 # Local Netlify folder
 .netlify
+
+# monorepo
+**/dist/
+**/.astro/
+.env.local
+uploads/
+backups/
+
+# deploy settings (VPS address, ssh key)
+deploy.env

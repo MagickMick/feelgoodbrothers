@@ -1,0 +1,29 @@
+---
+import { getCategoriesCached, categoryName, categoryPath } from "@js/blogUtils";
+import { getLocaleFromUrl } from "@js/localeUtils";
+
+interface Props {
+  showCount?: boolean;
+  /** highlight the current category */
+  activeId?: number;
+}
+
+const { showCount = false, activeId } = Astro.props as Props;
+const currLocale = getLocaleFromUrl(Astro.url);
+const categories = await getCategoriesCached(currLocale);
+---
+
+<div class="flex flex-wrap justify-center gap-x-4 gap-y-2">
+  {
+    categories.map((category) => (
+      <a
+        href={categoryPath(currLocale, category)}
+        class:list={["button button--ghost py-2 text-sm", { "bg-primary-200": category.id === activeId }]}
+        aria-current={category.id === activeId ? "page" : undefined}
+      >
+        {categoryName(currLocale, category)}
+        {showCount && <span class="text-xs opacity-70">{category.count}</span>}
+      </a>
+    ))
+  }
+</div>

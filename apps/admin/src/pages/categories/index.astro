@@ -1,0 +1,77 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { deleteCategory, saveCategory, ValidationError } from "@fgb/core/admin";
+import { getAllCategories } from "@fgb/core/posts";
+import { str } from "@/lib/ui";
+
+let errors: Record<string, string> = {};
+let errorFor: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const idRaw = str(form, "id");
+  const id = idRaw ? Number(idRaw) : null;
+  if (str(form, "intent") === "delete" && id) {
+    await deleteCategory(id);
+    return Astro.redirect("/categories/");
+  }
+  try {
+    await saveCategory(id, {
+      nameEn: str(form, "nameEn"),
+      slugEn: str(form, "slugEn"),
+      descriptionEn: str(form, "descriptionEn"),
+      nameNl: str(form, "nameNl"),
+      slugNl: str(form, "slugNl"),
+      descriptionNl: str(form, "descriptionNl"),
+      sortOrder: Number(str(form, "sortOrder")) || 0,
+    });
+    return Astro.redirect("/categories/");
+  } catch (err) {
+    if (!(err instanceof ValidationError)) throw err;
+    errors = err.fields;
+    errorFor = idRaw || "new";
+  }
+}
+
+const cats = await getAllCategories();
+const rows = [...cats.map((c) => ({ ...c, key: String(c.id) })), {
+  key: "new", id: 0, nameEn: "", slugEn: "", descriptionEn: "", nameNl: "", slugNl: "", descriptionNl: "", sortOrder: cats.length,
+}];
+---
+
+<AdminLayout title="Categorieën">
+  <h1 class="mb-2 text-2xl font-semibold">Categorieën</h1>
+  <p class="mb-6 text-sm text-gray-600">
+    Elke categorie heeft een Engelse en Nederlandse naam + URL. De omschrijving verschijnt als intro op de categoriepagina en als meta description (goed voor SEO). Een gewijzigde slug krijgt automatisch een 301-redirect.
+  </p>
+  <div class="space-y-4">
+    {rows.map((c) => (
+      <form method="post" class:list={["card", c.key === "new" && "border-dashed"]}>
+        {c.key !== "new" && <input type="hidden" name="id" value={c.id} />}
+        {c.key === "new" && <h2 class="mb-3 font-semibold">+ Nieuwe categorie</h2>}
+        {errorFor === c.key && <p class="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{Object.values(errors).join(" · ")}</p>}
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="space-y-2">
+            <p class="text-xs font-semibold uppercase text-gray-500">🇺🇸 Engels</p>
+            <input class="input" name="nameEn" value={c.nameEn} placeholder="Naam (bv. Panic attacks)" />
+            <input class="input" name="slugEn" value={c.slugEn} placeholder="slug (bv. panic-attacks)" />
+            <textarea class="input" name="descriptionEn" rows="2" placeholder="Intro / meta description (120-160 tekens)">{c.descriptionEn}</textarea>
+          </div>
+          <div class="space-y-2">
+            <p class="text-xs font-semibold uppercase text-gray-500">🇳🇱 Nederlands</p>
+            <input class="input" name="nameNl" value={c.nameNl} placeholder="Naam (bv. Paniekaanvallen)" />
+            <input class="input" name="slugNl" value={c.slugNl} placeholder="slug (bv. paniek-aanvallen)" />
+            <textarea class="input" name="descriptionNl" rows="2" placeholder="Intro / meta description (120-160 tekens)">{c.descriptionNl}</textarea>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center gap-3">
+          <label class="text-sm text-gray-600">Volgorde <input class="input inline-block w-20" type="number" name="sortOrder" value={c.sortOrder} /></label>
+          <button class="btn-primary ml-auto">{c.key === "new" ? "Toevoegen" : "Opslaan"}</button>
+          {c.key !== "new" && (
+            <button class="btn-secondary text-red-600" name="intent" value="delete" onclick="return confirm('Categorie verwijderen? Blogs blijven bestaan.')">Verwijderen</button>
+          )}
+        </div>
+      </form>
+    ))}
+  </div>
+</AdminLayout>

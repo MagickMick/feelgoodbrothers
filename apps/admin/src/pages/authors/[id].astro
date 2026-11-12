@@ -1,0 +1,97 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import ImageField from "@/components/ImageField";
+import { saveAuthor, ValidationError, type AuthorInput } from "@fgb/core/admin";
+import { getDb } from "@fgb/core/db";
+import { authors } from "@fgb/core/schema";
+import { mediaUrl } from "@fgb/core/storage";
+import { eq } from "drizzle-orm";
+import { heroUrlFor } from "@/lib/editorData";
+import { num, siteUrl, str } from "@/lib/ui";
+
+const isNew = Astro.params.id === "new";
+const id = isNew ? null : Number(Astro.params.id);
+const existing = id
+  ? await getDb().query.authors.findFirst({ where: eq(authors.id, id), with: { avatar: true } })
+  : null;
+if (!isNew && !existing) return Astro.redirect("/authors/");
+
+let values: AuthorInput = {
+  name: existing?.name ?? "",
+  slug: existing?.slug ?? "",
+  bioEn: existing?.bioEn ?? "",
+  bioNl: existing?.bioNl ?? "",
+  link: existing?.link ?? "",
+  email: existing?.email ?? "",
+  avatarId: existing?.avatarId ?? null,
+};
+let avatarUrl = existing?.avatar ? mediaUrl(existing.avatar, 480) : null;
+let errors: Record<string, string> = {};
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  values = {
+    name: str(form, "name"),
+    slug: str(form, "slug"),
+    bioEn: str(form, "bioEn"),
+    bioNl: str(form, "bioNl"),
+    link: str(form, "link"),
+    email: str(form, "email"),
+    avatarId: num(form, "avatarId"),
+  };
+  try {
+    await saveAuthor(id, values);
+    return Astro.redirect("/authors/");
+  } catch (err) {
+    if (!(err instanceof ValidationError)) throw err;
+    errors = err.fields;
+    avatarUrl = await heroUrlFor(values.avatarId);
+  }
+}
+---
+
+<AdminLayout title={isNew ? "Nieuwe auteur" : values.name}>
+  <a href="/authors/" class="text-sm text-gray-500 hover:text-gray-800">← Auteurs</a>
+  <h1 class="mb-6 mt-1 text-2xl font-semibold">{isNew ? "Nieuwe auteur" : values.name}</h1>
+  <form method="post" class="card max-w-2xl space-y-4">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="label" for="name">Naam (zoals getoond bij de blog)</label>
+        <input class="input" id="name" name="name" value={values.name} required />
+        {errors.name && <p class="field-error">{errors.name}</p>}
+      </div>
+      <div>
+        <label class="label" for="slug">Slug (profiel-URL)</label>
+        <input class="input" id="slug" name="slug" value={values.slug} placeholder="automatisch uit naam" />
+        {errors.slug && <p class="field-error">{errors.slug}</p>}
+      </div>
+    </div>
+    <div>
+      <p class="label">Profielfoto</p>
+      <ImageField client:load name="avatarId" initialId={values.avatarId} initialUrl={avatarUrl} round />
+    </div>
+    <div>
+      <label class="label" for="bioEn">Bio (Engels)</label>
+      <textarea class="input" id="bioEn" name="bioEn" rows="3">{values.bioEn}</textarea>
+    </div>
+    <div>
+      <label class="label" for="bioNl">Bio (Nederlands)</label>
+      <textarea class="input" id="bioNl" name="bioNl" rows="3">{values.bioNl}</textarea>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="label" for="link">Website / social (optioneel)</label>
+        <input class="input" id="link" name="link" value={values.link} placeholder="https://" />
+        {errors.link && <p class="field-error">{errors.link}</p>}
+      </div>
+      <div>
+        <label class="label" for="email">E-mail (intern, niet zichtbaar)</label>
+        <input class="input" id="email" name="email" type="email" value={values.email} />
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button class="btn-primary">Opslaan</button>
+      {existing && <a href={`${siteUrl()}/authors/${existing.slug}/`} target="_blank" rel="noopener" class="text-sm text-gray-500">Bekijk profiel ↗</a>}
+    </div>
+  </form>
+</AdminLayout>

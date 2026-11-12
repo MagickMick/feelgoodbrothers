@@ -1,0 +1,45 @@
+---
+/**
+ * Responsive <img> for uploaded media (pre-generated webp variants).
+ * Always sets width/height so the browser reserves space (no layout shift).
+ */
+import { mediaSrcset, mediaUrl, type MediaLike } from "@fgb/core/storage";
+
+interface Props {
+  media: (MediaLike & { alt?: string }) | null | undefined;
+  alt?: string;
+  sizes?: string;
+  /** width used for the src fallback */
+  width?: number;
+  class?: string;
+  priority?: boolean;
+}
+
+const {
+  media,
+  alt,
+  sizes = "(min-width: 1024px) 1000px, 100vw",
+  width = 1200,
+  class: className,
+  priority = false,
+} = Astro.props as Props;
+---
+
+{
+  media ? (
+    <img
+      src={mediaUrl(media, width)}
+      srcset={mediaSrcset(media)}
+      sizes={sizes}
+      width={media.width}
+      height={media.height}
+      alt={alt ?? media.alt ?? ""}
+      class={className}
+      loading={priority ? "eager" : "lazy"}
+      decoding={priority ? "sync" : "async"}
+      fetchpriority={priority ? "high" : "auto"}
+    />
+  ) : (
+    <div class:list={["aspect-[3/2] bg-base-200", className]} aria-hidden="true" />
+  )
+}

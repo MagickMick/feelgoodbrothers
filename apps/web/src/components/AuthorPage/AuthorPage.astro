@@ -1,0 +1,86 @@
+---
+/**
+ * Author profile page (/authors/x and /nl/auteurs/x). Important for E-E-A-T:
+ * shows who wrote the experience stories.
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import MediaImage from "@components/MediaImage/MediaImage.astro";
+import PostCardFull from "@components/PostCard/PostCardFull.astro";
+
+import { authorPath, getLivePosts, type Locale } from "@js/blogUtils";
+import { getAuthorBySlug } from "@fgb/core/posts";
+import { mediaUrl } from "@fgb/core/storage";
+import { breadcrumbLd, personLd } from "@js/jsonLD";
+import { useTranslations } from "@js/translationUtils";
+
+interface Props {
+  locale: Locale;
+  slug: string;
+}
+
+const { locale, slug } = Astro.props as Props;
+const t = useTranslations(locale);
+const author = (await getAuthorBySlug(slug))!;
+const posts = await getLivePosts(locale, { authorId: author.id });
+const bio = locale === "nl" ? author.bioNl : author.bioEn;
+
+Astro.locals.alternates = { en: authorPath("en", slug), nl: authorPath("nl", slug) };
+
+const title = `${t("posts_by")} ${author.name}`;
+const description =
+  bio ||
+  (locale === "nl"
+    ? `Lees de persoonlijke verhalen van ${author.name} over mentale gezondheid.`
+    : `Read ${author.name}'s personal stories about mental health.`);
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogType="profile"
+  noindex={posts.length === 0}
+  jsonLd={[
+    personLd({
+      name: author.name,
+      url: authorPath(locale, slug),
+      description: bio,
+      image: author.avatar ? mediaUrl(author.avatar, 480) : undefined,
+      sameAs: author.link ? [author.link] : [],
+    }),
+    breadcrumbLd([
+      { name: t("home"), path: locale === "nl" ? "/nl/" : "/" },
+      { name: author.name, path: authorPath(locale, slug) },
+    ]),
+  ]}
+>
+  <section class="site-container pt-36 md:pt-44">
+    <div class="mx-auto flex max-w-2xl flex-col items-center text-center">
+      {
+        author.avatar && (
+          <MediaImage
+            media={author.avatar}
+            alt={author.name}
+            width={480}
+            sizes="160px"
+            priority
+            class="h-32 w-32 rounded-full border-2 border-primary-500 object-cover md:h-40 md:w-40"
+          />
+        )
+      }
+      <h1 class="h1 mt-6">{author.name}</h1>
+      {bio && <p class="description mt-4">{bio}</p>}
+      {
+        author.link && (
+          <a href={author.link} class="mt-4 text-primary-600 underline" rel="noopener me" target="_blank">
+            {author.link.replace(/^https?:\/\//, "")}
+          </a>
+        )
+      }
+    </div>
+
+    <h2 class="h3 mt-20 text-center">{title}</h2>
+    <div class="mt-10 grid gap-4 gap-y-12">
+      {posts.map((post) => <PostCardFull post={post} showDescription={true} headingLevel="h3" />)}
+    </div>
+  </section>
+</BaseLayout>

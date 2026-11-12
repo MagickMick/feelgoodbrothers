@@ -1,0 +1,9 @@
+---
+import AuthorPage from "@components/AuthorPage/AuthorPage.astro";
+import { getAuthorBySlug } from "@fgb/core/posts";
+
+const slug = Astro.params.slug ?? "";
+if (!(await getAuthorBySlug(slug))) return Astro.rewrite("/404/");
+---
+
+<AuthorPage locale="en" slug={slug} />

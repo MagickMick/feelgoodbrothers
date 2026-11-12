@@ -1,0 +1,21 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Hero from "@components/Hero/HeroBgImage.astro";
+import BlogIndex from "@components/BlogIndex/BlogIndex.astro";
+
+import { getTranslatedData } from "@js/translationUtils";
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { organizationLd, websiteLd } from "@js/jsonLD";
+
+const currLocale = getLocaleFromUrl(Astro.url);
+const siteData = getTranslatedData("siteData", currLocale);
+---
+
+<BaseLayout
+  title={siteData.title}
+  description={siteData.description}
+  jsonLd={[organizationLd(), websiteLd(currLocale, siteData.description)]}
+>
+  <Hero />
+  <BlogIndex />
+</BaseLayout>

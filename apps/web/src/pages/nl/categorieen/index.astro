@@ -1,0 +1,18 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import CategoryCloud from "@components/CategoryCloud/CategoryCloud.astro";
+---
+
+<BaseLayout
+  title="Alle onderwerpen: angst, paniekaanvallen, derealisatie en meer"
+  description="Bekijk alle onderwerpen waar we over schrijven: paniekaanvallen, angst, derealisatie, hoogsensitiviteit, mindfulness en meer."
+>
+  <section class="site-container pt-36 md:pt-44">
+    <div class="mx-auto max-w-3xl">
+      <h1 class="h1 text-center">Categorieën</h1>
+      <div class="mt-10 flex justify-center">
+        <CategoryCloud showCount={true} />
+      </div>
+    </div>
+  </section>
+</BaseLayout>
