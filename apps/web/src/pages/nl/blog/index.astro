@@ -1,0 +1,29 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PostCardFull from "@components/PostCard/PostCardFull.astro";
+import CategoryCloud from "@components/CategoryCloud/CategoryCloud.astro";
+
+import { getLivePosts } from "@js/blogUtils";
+import { breadcrumbLd } from "@js/jsonLD";
+
+const posts = await getLivePosts("nl");
+---
+
+<BaseLayout
+  title="Persoonlijke blogs over angst, paniekaanvallen en mentale gezondheid"
+  description="Eerlijke, persoonlijke blogs over paniekaanvallen, angst, derealisatie, hoogsensitiviteit en wat ons helpt. Je staat er niet alleen voor."
+  jsonLd={[breadcrumbLd([{ name: "Home", path: "/nl/" }, { name: "Blog", path: "/nl/blog/" }])]}
+>
+  <section class="site-container pt-36 md:pt-44">
+    <h1 class="h1 sm:text-center">
+      Waardevolle blogs van <span class="text-primary-600">ons</span>
+    </h1>
+    <div class="mt-6 flex justify-center">
+      <CategoryCloud />
+    </div>
+
+    <div class="mt-20 grid gap-4 gap-y-12 md:mt-28">
+      {posts.map((post) => <PostCardFull post={post} showDescription={true} />)}
+    </div>
+  </section>
+</BaseLayout>

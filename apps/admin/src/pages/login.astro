@@ -1,0 +1,75 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import {
+  SESSION_COOKIE,
+  SESSION_DAYS,
+  clearAttempts,
+  createSession,
+  isRateLimited,
+  registerFailedAttempt,
+  validateSession,
+  verifyLogin,
+} from "@fgb/core/auth";
+
+const nextParam = Astro.url.searchParams.get("next") ?? "/";
+// only allow relative redirects back into the admin
+const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
+
+if (await validateSession(Astro.cookies.get(SESSION_COOKIE)?.value)) {
+  return Astro.redirect(next);
+}
+
+let error = "";
+let email = "";
+
+if (Astro.request.method === "POST") {
+  // nginx sets X-Real-IP (already resolved to the visitor IP behind Cloudflare)
+  const ip = Astro.request.headers.get("x-real-ip") ?? Astro.clientAddress;
+  const form = await Astro.request.formData();
+  email = String(form.get("email") ?? "").trim();
+  const password = String(form.get("password") ?? "");
+  const key = `${ip}:${email.toLowerCase()}`;
+
+  if (isRateLimited(key) || isRateLimited(ip)) {
+    error = "Te veel pogingen. Probeer het over 15 minuten opnieuw.";
+  } else {
+    const user = await verifyLogin(email, password);
+    if (user) {
+      clearAttempts(key);
+      const { token, expiresAt } = await createSession(user.id);
+      Astro.cookies.set(SESSION_COOKIE, token, {
+        httpOnly: true,
+        secure: import.meta.env.PROD,
+        sameSite: "lax",
+        path: "/",
+        expires: expiresAt,
+        maxAge: SESSION_DAYS * 24 * 60 * 60,
+      });
+      return Astro.redirect(next);
+    }
+    registerFailedAttempt(key);
+    registerFailedAttempt(ip);
+    error = "E-mail of wachtwoord klopt niet.";
+  }
+}
+---
+
+<AdminLayout title="Inloggen">
+  <div class="mx-auto mt-16 max-w-sm">
+    <h1 class="mb-6 text-center text-2xl font-semibold">
+      <span class="text-brand-600">Feelgood Brothers</span> admin
+    </h1>
+    <form method="post" class="card space-y-4">
+      {error && <p class="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      <div>
+        <label class="label" for="email">E-mail</label>
+        <input class="input" id="email" name="email" type="email" required autocomplete="username" value={email} autofocus />
+      </div>
+      <div>
+        <label class="label" for="password">Wachtwoord</label>
+        <input class="input" id="password" name="password" type="password" required autocomplete="current-password" />
+      </div>
+      <button class="btn-primary w-full" type="submit">Inloggen</button>
+    </form>
+  </div>
+</AdminLayout>

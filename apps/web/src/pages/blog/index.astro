@@ -1,0 +1,29 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PostCardFull from "@components/PostCard/PostCardFull.astro";
+import CategoryCloud from "@components/CategoryCloud/CategoryCloud.astro";
+
+import { getLivePosts } from "@js/blogUtils";
+import { breadcrumbLd } from "@js/jsonLD";
+
+const posts = await getLivePosts("en");
+---
+
+<BaseLayout
+  title="Personal stories about anxiety, panic attacks and mental health"
+  description="Honest, personal blogs about panic attacks, anxiety, derealization, high sensitivity and what helps us cope. You are not alone."
+  jsonLd={[breadcrumbLd([{ name: "Home", path: "/" }, { name: "Blog", path: "/blog/" }])]}
+>
+  <section class="site-container pt-36 md:pt-44">
+    <h1 class="h1 text-center">
+      Helpful blogs from <span class="text-primary-600">us</span>
+    </h1>
+    <div class="mt-6 flex justify-center">
+      <CategoryCloud />
+    </div>
+
+    <div class="mt-20 grid gap-4 gap-y-12 md:mt-28">
+      {posts.map((post) => <PostCardFull post={post} showDescription={true} />)}
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,82 @@
+---
+import MediaImage from "@components/MediaImage/MediaImage.astro";
+import GuestBadge from "@components/GuestBadge/GuestBadge.astro";
+import { categoryName, postPath, type PostWithRelations } from "@js/blogUtils";
+import { formatDate } from "@js/textUtils";
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { useTranslations } from "@js/translationUtils";
+import { bylineName } from "@fgb/core/posts";
+
+interface Props {
+  post: PostWithRelations;
+  showDescription?: boolean;
+  class?: string;
+  headingLevel?: "h2" | "h3";
+  [key: string]: any;
+}
+
+const {
+  post,
+  showDescription = false,
+  class: className,
+  headingLevel: Heading = "h3",
+  ...rest
+} = Astro.props as Props;
+
+const currLocale = getLocaleFromUrl(Astro.url);
+const t = useTranslations(currLocale);
+const byline = bylineName(post);
+---
+
+<a
+  href={postPath(post.locale, post.slug)}
+  class={`flex group flex-col ${className ?? ""}`}
+  {...rest}
+>
+  <div
+    class="shrink-0 justify-center overflow-hidden rounded-lg sm:justify-normal"
+  >
+    <figure>
+      <MediaImage
+        media={post.hero}
+        alt={post.heroAlt || post.title}
+        width={480}
+        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+        class="h-auto max-h-32 w-full object-cover transition-all duration-500 group-hover:scale-[1.02]"
+      />
+    </figure>
+  </div>
+  <div class="w-full">
+    <!-- categories -->
+    <div class="mt-1 flex flex-wrap items-center gap-4">
+      {post.kind === "guest" && <GuestBadge />}
+      {post.categories.map((category) => <span class="font-medium">{categoryName(currLocale, category)}</span>)}
+    </div>
+
+    <!-- title -->
+    <Heading class="text-lg font-medium md:text-xl">
+      {post.title}
+    </Heading>
+
+    <!-- description -->
+    {
+      showDescription && (
+        <p class="description mt-1 text-sm lg:text-base">{post.description}</p>
+      )
+    }
+
+    <div class="mt-1 flex flex-wrap gap-1 text-sm opacity-80">
+      {post.publishAt && (
+        <time class="whitespace-nowrap" datetime={post.publishAt.toISOString()}>
+          {formatDate(post.publishAt, currLocale)}
+        </time>
+      )}
+      {byline && (
+        <>
+          <span>&bull;</span>
+          <p class="whitespace-nowrap">{post.kind === "guest" && `${t("by")} `}{byline}</p>
+        </>
+      )}
+    </div>
+  </div>
+</a>

@@ -1,0 +1,9 @@
+---
+import CategoryPage from "@components/CategoryPage/CategoryPage.astro";
+import { getCategoryBySlug } from "@js/blogUtils";
+
+const slug = Astro.params.category ?? "";
+if (!(await getCategoryBySlug("nl", slug))) return Astro.rewrite("/nl/404/");
+---
+
+<CategoryPage locale="nl" slug={slug} />

@@ -1,0 +1,92 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import PostEditor, { type EditorPost } from "@/components/PostEditor";
+import { savePost, ValidationError } from "@fgb/core/admin";
+import { getPostById, postPath } from "@fgb/core/posts";
+import { getDb } from "@fgb/core/db";
+import { posts } from "@fgb/core/schema";
+import { formatDateTime } from "@fgb/core/time";
+import { and, eq, ne } from "drizzle-orm";
+import { inputToEditorPost, parsePostForm, toEditorPost } from "@/lib/postForm";
+import { heroUrlFor, loadEditorOptions } from "@/lib/editorData";
+import { FLAGS, siteUrl, statusInfo, str } from "@/lib/ui";
+
+const id = Number(Astro.params.id);
+const existing = Number.isFinite(id) ? await getPostById(id) : null;
+if (!existing) return Astro.redirect("/");
+
+const { authors, categories } = await loadEditorOptions();
+let post: EditorPost = toEditorPost(existing);
+let errors: Record<string, string> = {};
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const input = parsePostForm(form);
+  try {
+    await savePost(id, input);
+    return Astro.redirect(`/posts/${id}/?saved=1`);
+  } catch (err) {
+    if (!(err instanceof ValidationError)) throw err;
+    errors = err.fields;
+    post = inputToEditorPost(input, post, await heroUrlFor(input.heroId), str(form, "publishAt"));
+  }
+}
+
+const [translation] = await getDb()
+  .select({ id: posts.id, locale: posts.locale, title: posts.title })
+  .from(posts)
+  .where(and(eq(posts.translationGroup, existing.translationGroup), ne(posts.id, id)))
+  .limit(1);
+
+const s = statusInfo(existing.status, existing.publishAt);
+const saved = Astro.url.searchParams.get("saved") === "1";
+const liveUrl = siteUrl() + postPath(existing.locale, existing.slug);
+---
+
+<AdminLayout title={existing.title || "Blog bewerken"} wide>
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <a href="/" class="text-sm text-gray-500 hover:text-gray-800">← Alle blogs</a>
+      <h1 class="mt-1 flex flex-wrap items-center gap-3 text-2xl font-semibold">
+        {FLAGS[existing.locale]}
+        <span class:list={["badge text-sm", s.cls]}>{s.label}</span>
+        {existing.status === "scheduled" && s.label === "Ingepland" && (
+          <span class="text-sm font-normal text-gray-500">gaat live op {formatDateTime(existing.publishAt)}</span>
+        )}
+      </h1>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 text-sm">
+      {s.label === "Live" && <a href={liveUrl} target="_blank" rel="noopener" class="btn-secondary">Bekijk live ↗</a>}
+      {translation ? (
+        <a href={`/posts/${translation.id}/`} class="btn-secondary">{FLAGS[translation.locale]} versie bewerken →</a>
+      ) : (
+        <form method="post" action={`/posts/${id}/translate/`}>
+          <button class="btn-secondary">+ Maak {existing.locale === "en" ? "Nederlandse" : "Engelse"} versie</button>
+        </form>
+      )}
+    </div>
+  </div>
+
+  {saved && Object.keys(errors).length === 0 && (
+    <p class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-800">✓ Opgeslagen</p>
+  )}
+
+  <PostEditor
+    client:load
+    post={post}
+    authors={authors}
+    categories={categories}
+    errors={errors}
+    siteUrl={siteUrl()}
+    hasTranslation={Boolean(translation)}
+  />
+
+  <form
+    method="post"
+    action={`/posts/${id}/delete/`}
+    class="mt-10 border-t border-gray-200 pt-6"
+    onsubmit="return confirm('Deze blog definitief verwijderen? Dit kan niet ongedaan worden gemaakt.')"
+  >
+    <button class="text-sm text-red-600 hover:underline">Blog verwijderen</button>
+  </form>
+</AdminLayout>

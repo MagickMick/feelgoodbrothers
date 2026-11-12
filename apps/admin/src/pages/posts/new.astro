@@ -1,0 +1,69 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import PostEditor, { type EditorPost } from "@/components/PostEditor";
+import { savePost, ValidationError } from "@fgb/core/admin";
+import { parsePostForm, inputToEditorPost } from "@/lib/postForm";
+import { heroUrlFor, loadEditorOptions } from "@/lib/editorData";
+import { siteUrl, str } from "@/lib/ui";
+
+const locale = Astro.url.searchParams.get("locale") === "nl" ? "nl" : "en";
+const { authors, categories } = await loadEditorOptions();
+
+let post: EditorPost = {
+  locale,
+  title: "",
+  slug: "",
+  description: "",
+  body: "",
+  heroId: null,
+  heroUrl: null,
+  heroAlt: "",
+  authorId: authors[0]?.id ?? null,
+  kind: Astro.url.searchParams.get("kind") === "guest" ? "guest" : "team",
+  guestName: "",
+  guestEmail: "",
+  guestConsentDate: "",
+  guestNote: "",
+  categoryIds: [],
+  status: "draft",
+  publishAtLocal: "",
+  isLive: false,
+  seoTitle: "",
+  metaDescription: "",
+  canonicalUrl: "",
+  noindex: false,
+};
+let errors: Record<string, string> = {};
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const input = parsePostForm(form);
+  try {
+    const id = await savePost(null, input);
+    return Astro.redirect(`/posts/${id}/?saved=1`);
+  } catch (err) {
+    if (!(err instanceof ValidationError)) throw err;
+    errors = err.fields;
+    post = inputToEditorPost(input, {}, await heroUrlFor(input.heroId), str(form, "publishAt"));
+  }
+}
+---
+
+<AdminLayout title="Nieuwe blog" wide>
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-semibold">Nieuwe blog</h1>
+    <div class="flex gap-2 text-sm">
+      <a href={`/posts/new/?locale=en${Astro.url.searchParams.get("kind") === "guest" ? "&kind=guest" : ""}`} class:list={["rounded-full border px-3 py-1", locale === "en" ? "border-brand-500 bg-brand-50" : "bg-white"]}>🇺🇸 Engels</a>
+      <a href={`/posts/new/?locale=nl${Astro.url.searchParams.get("kind") === "guest" ? "&kind=guest" : ""}`} class:list={["rounded-full border px-3 py-1", locale === "nl" ? "border-brand-500 bg-brand-50" : "bg-white"]}>🇳🇱 Nederlands</a>
+    </div>
+  </div>
+  <PostEditor
+    client:load
+    post={post}
+    authors={authors}
+    categories={categories}
+    errors={errors}
+    siteUrl={siteUrl()}
+    hasTranslation={false}
+  />
+</AdminLayout>

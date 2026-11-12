@@ -1,0 +1,129 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { listPostsForAdmin } from "@fgb/core/admin";
+import { postPath } from "@fgb/core/posts";
+import { mediaUrl } from "@fgb/core/storage";
+import { formatDateTime } from "@fgb/core/time";
+import { FLAGS, siteUrl, statusInfo } from "@/lib/ui";
+import type { Locale } from "@fgb/core/schema";
+
+const params = Astro.url.searchParams;
+const locale = (["en", "nl"].includes(params.get("locale") ?? "") ? params.get("locale") : undefined) as Locale | undefined;
+const statusParam = params.get("status") ?? "";
+const status = (["draft", "scheduled", "live"].includes(statusParam) ? statusParam : undefined) as
+  | "draft"
+  | "scheduled"
+  | "live"
+  | undefined;
+const q = (params.get("q") ?? "").trim();
+const kindParam = params.get("kind") ?? "";
+const kind = (["team", "guest"].includes(kindParam) ? kindParam : undefined) as "team" | "guest" | undefined;
+
+const posts = await listPostsForAdmin({ locale, status, kind, q: q || undefined });
+
+function filterHref(key: string, value: string) {
+  const p = new URLSearchParams(params);
+  if (value) p.set(key, value);
+  else p.delete(key);
+  const s = p.toString();
+  return s ? `/?${s}` : "/";
+}
+
+const scheduledCount = posts.filter((p) => p.status === "scheduled" && p.publishAt && p.publishAt > new Date()).length;
+---
+
+<AdminLayout title="Blogs" wide>
+  <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold">Blogs</h1>
+      <p class="text-sm text-gray-500">
+        {posts.length} blogs{scheduledCount > 0 && ` · ${scheduledCount} ingepland`}
+      </p>
+    </div>
+    <form method="get" class="flex flex-wrap items-center gap-2">
+      <a href="/posts/new/?kind=guest" class="btn-secondary">+ Gastblog</a>
+      {locale && <input type="hidden" name="locale" value={locale} />}
+      {status && <input type="hidden" name="status" value={status} />}
+      {kind && <input type="hidden" name="kind" value={kind} />}
+      <input class="input w-64" type="search" name="q" value={q} placeholder="Zoek op titel of slug…" />
+      <button class="btn-secondary">Zoeken</button>
+    </form>
+  </div>
+
+  <div class="mb-4 flex flex-wrap gap-2 text-sm">
+    <span class="py-1 text-gray-500">Taal:</span>
+    {[["", "Alle"], ["en", "🇺🇸 EN"], ["nl", "🇳🇱 NL"]].map(([v, l]) => (
+      <a href={filterHref("locale", v)} class:list={["rounded-full border px-3 py-1", (locale ?? "") === v ? "border-brand-500 bg-brand-50 text-brand-700" : "border-gray-300 bg-white"]}>{l}</a>
+    ))}
+    <span class="ml-4 py-1 text-gray-500">Status:</span>
+    {[["", "Alle"], ["live", "Live"], ["scheduled", "Ingepland"], ["draft", "Concept"]].map(([v, l]) => (
+      <a href={filterHref("status", v)} class:list={["rounded-full border px-3 py-1", (status ?? "") === v ? "border-brand-500 bg-brand-50 text-brand-700" : "border-gray-300 bg-white"]}>{l}</a>
+    ))}
+    <span class="ml-4 py-1 text-gray-500">Type:</span>
+    {[["", "Alle"], ["team", "Feelgood Brothers"], ["guest", "Gastblogs"]].map(([v, l]) => (
+      <a href={filterHref("kind", v)} class:list={["rounded-full border px-3 py-1", (kind ?? "") === v ? "border-brand-500 bg-brand-50 text-brand-700" : "border-gray-300 bg-white"]}>{l}</a>
+    ))}
+  </div>
+
+  <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+        <tr>
+          <th class="px-4 py-3">Blog</th>
+          <th class="px-4 py-3">Taal</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3">Publicatie</th>
+          <th class="px-4 py-3">Vertaling</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {posts.length === 0 && (
+          <tr><td colspan="6" class="px-4 py-10 text-center text-gray-500">Geen blogs gevonden. <a href="/posts/new/" class="text-brand-600 underline">Schrijf de eerste</a>.</td></tr>
+        )}
+        {posts.map((p) => {
+          const s = statusInfo(p.status, p.publishAt);
+          const other = p.translations[0];
+          return (
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3">
+                <a href={`/posts/${p.id}/`} class="flex items-center gap-3">
+                  {p.hero ? (
+                    <img src={mediaUrl(p.hero, 480)} alt="" class="h-12 w-16 shrink-0 rounded object-cover" loading="lazy" />
+                  ) : (
+                    <div class="h-12 w-16 shrink-0 rounded bg-gray-100" />
+                  )}
+                  <div>
+                    <div class="font-medium text-gray-900">{p.title}</div>
+                    <div class="text-xs text-gray-500">
+                      {p.kind === "guest" && <span class="badge mr-1 bg-purple-100 text-purple-800">Gastblog</span>}
+                      /{p.slug}
+                      {p.kind === "guest" ? ` · ${p.guestName || "naam ontbreekt"}` : p.author && ` · ${p.author.name}`}
+                    </div>
+                  </div>
+                </a>
+              </td>
+              <td class="whitespace-nowrap px-4 py-3">{FLAGS[p.locale]}</td>
+              <td class="px-4 py-3"><span class:list={["badge", s.cls]}>{s.label}</span></td>
+              <td class="whitespace-nowrap px-4 py-3 text-gray-600">{formatDateTime(p.publishAt)}</td>
+              <td class="whitespace-nowrap px-4 py-3">
+                {other ? (
+                  <a href={`/posts/${other.id}/`} class="text-brand-600 hover:underline">{FLAGS[other.locale]} →</a>
+                ) : (
+                  <form method="post" action={`/posts/${p.id}/translate/`}>
+                    <button class="text-gray-500 hover:text-brand-600">+ {p.locale === "en" ? "NL" : "EN"} versie</button>
+                  </form>
+                )}
+              </td>
+              <td class="whitespace-nowrap px-4 py-3 text-right">
+                {s.label === "Live" && (
+                  <a href={siteUrl() + postPath(p.locale, p.slug)} target="_blank" rel="noopener" class="text-gray-500 hover:text-gray-900">Bekijk ↗</a>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

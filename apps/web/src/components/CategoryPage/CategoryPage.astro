@@ -1,0 +1,84 @@
+---
+/**
+ * Category landing page (shared by /categories/x and /nl/categorieen/y).
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PostCardFull from "@components/PostCard/PostCardFull.astro";
+import CategoryCloud from "@components/CategoryCloud/CategoryCloud.astro";
+
+import {
+  categoryDescription,
+  categoryName,
+  categoryPath,
+  getCategoryBySlug,
+  getLivePosts,
+  type Locale,
+} from "@js/blogUtils";
+import { breadcrumbLd } from "@js/jsonLD";
+import { useTranslations } from "@js/translationUtils";
+
+interface Props {
+  locale: Locale;
+  slug: string;
+}
+
+const { locale, slug } = Astro.props as Props;
+const t = useTranslations(locale);
+const category = await getCategoryBySlug(locale, slug);
+const posts = category ? await getLivePosts(locale, { categoryId: category.id }) : [];
+
+const name = category ? categoryName(locale, category) : "";
+const intro = category ? categoryDescription(locale, category) : "";
+
+if (category) {
+  Astro.locals.alternates = {
+    en: categoryPath("en", category),
+    nl: categoryPath("nl", category),
+  };
+}
+
+const title =
+  locale === "nl"
+    ? `${name}: persoonlijke ervaringen en tips`
+    : `${name}: personal stories and coping tips`;
+const description =
+  intro ||
+  (locale === "nl"
+    ? `Lees eerlijke, persoonlijke verhalen over ${name.toLowerCase()} en wat ons helpt. Je staat er niet alleen voor.`
+    : `Read honest, personal stories about ${name.toLowerCase()} and what helps us cope. You are not alone.`);
+
+const home = locale === "nl" ? "/nl/" : "/";
+const indexPath = locale === "nl" ? "/nl/categorieen/" : "/categories/";
+---
+
+{
+  category && (
+    <BaseLayout
+      title={title}
+      description={description}
+      noindex={posts.length === 0}
+      jsonLd={[
+        breadcrumbLd([
+          { name: t("home"), path: home },
+          { name: t("categories"), path: indexPath },
+          { name, path: categoryPath(locale, category) },
+        ]),
+      ]}
+    >
+      <section class="site-container pt-36 md:pt-44">
+        <h1 class="h1 text-center">
+          {locale === "nl" ? "Blogs over " : "Helpful blogs about "}
+          <span class="text-primary-600">{name.toLowerCase()}</span>
+        </h1>
+        {intro && <p class="description mx-auto mt-6 max-w-2xl text-center">{intro}</p>}
+        <div class="mt-6 flex justify-center">
+          <CategoryCloud activeId={category.id} />
+        </div>
+
+        <div class="mt-20 grid gap-4 gap-y-12 md:mt-28">
+          {posts.map((post) => <PostCardFull post={post} showDescription={true} />)}
+        </div>
+      </section>
+    </BaseLayout>
+  )
+}

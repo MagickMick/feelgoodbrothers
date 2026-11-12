@@ -1,0 +1,68 @@
+---
+import "@/styles/admin.css";
+
+interface Props {
+  title: string;
+  wide?: boolean;
+}
+
+const { title, wide = false } = Astro.props;
+const user = Astro.locals.user;
+const path = Astro.url.pathname;
+const siteUrl = process.env.SITE_URL ?? "https://feelgoodbrothers.com";
+
+const nav = [
+  { href: "/", label: "Blogs", match: (p: string) => p === "/" || p.startsWith("/posts") },
+  { href: "/authors/", label: "Auteurs", match: (p: string) => p.startsWith("/authors") },
+  { href: "/categories/", label: "Categorieën", match: (p: string) => p.startsWith("/categories") },
+  { href: "/media/", label: "Media", match: (p: string) => p.startsWith("/media") },
+  { href: "/redirects/", label: "Redirects", match: (p: string) => p.startsWith("/redirects") },
+];
+---
+
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title} · FGB Admin</title>
+  </head>
+  <body class="min-h-screen bg-gray-50 text-gray-900">
+    {
+      user && (
+        <header class="border-b border-gray-200 bg-white">
+          <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+            <a href="/" class="font-semibold text-brand-600">Feelgood Brothers</a>
+            <nav class="flex flex-wrap gap-1 text-sm">
+              {nav.map((n) => (
+                <a
+                  href={n.href}
+                  class:list={[
+                    "rounded-md px-3 py-1.5",
+                    n.match(path) ? "bg-brand-50 font-medium text-brand-700" : "text-gray-600 hover:bg-gray-100",
+                  ]}
+                >
+                  {n.label}
+                </a>
+              ))}
+            </nav>
+            <div class="ml-auto flex items-center gap-3 text-sm">
+              <a href="/posts/new/" class="btn-primary py-1.5">+ Nieuwe blog</a>
+              <a href={siteUrl} target="_blank" rel="noopener" class="text-gray-600 hover:text-gray-900">
+                Bekijk site ↗
+              </a>
+              <form method="post" action="/logout/">
+                <button class="text-gray-600 hover:text-gray-900" title={user.email}>Uitloggen</button>
+              </form>
+            </div>
+          </div>
+        </header>
+      )
+    }
+    <main class:list={["mx-auto px-4 py-8", wide ? "max-w-7xl" : "max-w-5xl"]}>
+      <slot />
+    </main>
+  </body>
+</html>

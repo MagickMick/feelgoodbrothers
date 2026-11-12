@@ -1,0 +1,66 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { addRedirect, deleteRedirect, listRedirects } from "@fgb/core/admin";
+import { str } from "@/lib/ui";
+
+let error = "";
+const norm = (p: string) => {
+  let s = p.trim().replace(/^https?:\/\/[^/]+/, "");
+  if (!s.startsWith("/")) s = `/${s}`;
+  if (!s.endsWith("/") && !s.split("/").pop()?.includes(".")) s = `${s}/`;
+  return s;
+};
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  if (str(form, "intent") === "delete") {
+    await deleteRedirect(Number(str(form, "id")));
+    return Astro.redirect("/redirects/");
+  }
+  const from = str(form, "from");
+  const to = str(form, "to");
+  if (!from || !to) error = "Vul beide velden in";
+  else {
+    await addRedirect(norm(from), norm(to));
+    return Astro.redirect("/redirects/");
+  }
+}
+const rows = await listRedirects();
+---
+
+<AdminLayout title="Redirects">
+  <h1 class="mb-2 text-2xl font-semibold">Redirects (301)</h1>
+  <p class="mb-6 text-sm text-gray-600">Worden automatisch aangemaakt als je de slug van een live blog, categorie of auteur wijzigt. Je kunt ze hier ook handmatig toevoegen.</p>
+  <form method="post" class="card mb-6 flex flex-wrap items-end gap-3">
+    <div class="flex-1">
+      <label class="label" for="from">Van</label>
+      <input class="input" id="from" name="from" placeholder="/blog/oude-url/" />
+    </div>
+    <div class="flex-1">
+      <label class="label" for="to">Naar</label>
+      <input class="input" id="to" name="to" placeholder="/blog/nieuwe-url/" />
+    </div>
+    <button class="btn-primary">Toevoegen</button>
+    {error && <p class="field-error w-full">{error}</p>}
+  </form>
+  <div class="overflow-hidden rounded-lg border border-gray-200 bg-white">
+    <table class="min-w-full divide-y divide-gray-100 text-sm">
+      <tbody class="divide-y divide-gray-100">
+        {rows.length === 0 && <tr><td class="p-4 text-gray-500">Nog geen redirects.</td></tr>}
+        {rows.map((r) => (
+          <tr>
+            <td class="px-4 py-2 font-mono text-xs">{r.fromPath}</td>
+            <td class="px-2 text-gray-400">→</td>
+            <td class="px-4 py-2 font-mono text-xs">{r.toPath}</td>
+            <td class="px-4 py-2 text-right">
+              <form method="post">
+                <input type="hidden" name="id" value={r.id} />
+                <button name="intent" value="delete" class="text-red-600 hover:underline">Verwijderen</button>
+              </form>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

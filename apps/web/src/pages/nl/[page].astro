@@ -1,0 +1,10 @@
+---
+import { getEntry } from "astro:content";
+import StaticPage from "@components/StaticPage/StaticPage.astro";
+
+const page = Astro.params.page ?? "";
+const entry = await getEntry("otherPages", `nl/${page}`);
+if (!entry || entry.data.draft) return Astro.rewrite("/nl/404/");
+---
+
+<StaticPage locale="nl" page={page} />

@@ -1,0 +1,24 @@
+---
+/**
+ * "Guest story" / "Gastblog" label on cards and posts. Guest stories are listed
+ * between all other blogs (per category); there is no separate section.
+ */
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { useTranslations } from "@js/translationUtils";
+
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props as Props;
+const t = useTranslations(getLocaleFromUrl(Astro.url));
+---
+
+<span
+  class:list={[
+    "inline-flex items-center gap-1 rounded-full bg-primary-200 px-2.5 py-0.5 text-xs font-medium text-primary-900",
+    className,
+  ]}
+>
+  ✦ {t("guest_story")}
+</span>

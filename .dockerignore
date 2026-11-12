@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.astro
+.git
+.env
+.env.*
+!.env.example
+uploads
+backups
+**/.DS_Store

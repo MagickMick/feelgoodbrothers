@@ -1,0 +1,24 @@
+---
+import BlogLayout from "@layouts/BlogLayoutCenter.astro";
+import { getLivePostBySlug, getLiveTranslations, getRelatedPosts, postPath } from "@js/blogUtils";
+import { renderMarkdown } from "@fgb/core/markdown";
+
+const locale = "nl" as const;
+const slug = Astro.params.slug ?? "";
+const post = slug ? await getLivePostBySlug(locale, slug) : null;
+if (!post) return Astro.rewrite("/nl/404/");
+
+const [related, translations] = await Promise.all([
+  getRelatedPosts(post, 3),
+  getLiveTranslations(post),
+]);
+
+Astro.locals.alternates = {
+  [locale]: postPath(locale, post.slug),
+  ...Object.fromEntries(translations.map((t) => [t.locale, postPath(t.locale, t.slug)])),
+};
+
+const html = renderMarkdown(post.body);
+---
+
+<BlogLayout post={post} html={html} related={related} />

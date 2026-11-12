@@ -1,0 +1,325 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+
+import Button from "@components/Button/Button.astro";
+import MediaImage from "@components/MediaImage/MediaImage.astro";
+import PostCardSmall from "@components/PostCard/PostCardSmall.astro";
+import GuestBadge from "@components/GuestBadge/GuestBadge.astro";
+
+import {
+  absoluteUrl,
+  authorPath,
+  categoryName,
+  categoryPath,
+  postPath,
+  type PostWithRelations,
+} from "@js/blogUtils";
+import { mediaSrcset, mediaUrl, ogImageUrl } from "@fgb/core/storage";
+import { readingTime, wordCount } from "@fgb/core/text";
+import { formatDate } from "@js/textUtils";
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { useTranslations } from "@js/translationUtils";
+import { blogPostingLd, breadcrumbLd } from "@js/jsonLD";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { getTranslatedData } from "@js/translationUtils";
+
+interface Props {
+  post: PostWithRelations;
+  html: string;
+  related: PostWithRelations[];
+}
+
+const { post, html, related } = Astro.props as Props;
+const currLocale = getLocaleFromUrl(Astro.url);
+const t = useTranslations(currLocale);
+
+const url = postPath(post.locale, post.slug);
+const canonical = post.canonicalUrl || url;
+const title = post.seoTitle || post.title;
+const description = post.metaDescription || post.description;
+const publishAt = post.publishAt ?? post.createdAt;
+const modified =
+  post.contentUpdatedAt && post.contentUpdatedAt > publishAt ? post.contentUpdatedAt : null;
+const minutes = readingTime(post.body);
+const blogIndex = getRelativeLocaleUrl(currLocale, "/blog/");
+const firstCategory = post.categories[0];
+const isGuest = post.kind === "guest";
+const guestName = isGuest ? post.guestName?.trim() || null : null;
+// team author is only shown on team posts
+const author = isGuest ? null : post.author;
+const storyEmail = getTranslatedData("siteData", currLocale).story.email;
+
+const crumbs = [
+  { name: t("home"), path: getRelativeLocaleUrl(currLocale, "/") },
+  { name: t("blog"), path: blogIndex },
+  ...(firstCategory
+    ? [{ name: categoryName(currLocale, firstCategory), path: categoryPath(currLocale, firstCategory) }]
+    : []),
+  { name: post.title, path: url },
+];
+
+const ogImage = post.hero
+  ? { url: ogImageUrl(post.hero), width: 1200, height: 630, alt: post.heroAlt || post.title }
+  : undefined;
+
+const jsonLd = [
+  blogPostingLd({
+    url: canonical,
+    title: post.title,
+    description,
+    locale: post.locale,
+    images: post.hero ? [ogImageUrl(post.hero), mediaUrl(post.hero, 1200)] : [],
+    datePublished: publishAt,
+    dateModified: modified,
+    author: author
+      ? { name: author.name, url: authorPath(currLocale, author.slug) }
+      : guestName
+        ? { name: guestName }
+        : null,
+    categories: post.categories.map((c) => categoryName(currLocale, c)),
+    wordCount: wordCount(post.body),
+  }),
+  breadcrumbLd(crumbs),
+];
+
+const heroSizes = "(min-width: 1024px) 1000px, 100vw";
+const bio = author ? (currLocale === "nl" ? author.bioNl : author.bioEn) : "";
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  image={ogImage}
+  ogType="article"
+  noindex={post.noindex}
+  canonical={canonical}
+  article={{
+    publishedTime: publishAt,
+    modifiedTime: modified,
+    authorUrl: author ? authorPath(currLocale, author.slug) : undefined,
+    section: firstCategory ? categoryName(currLocale, firstCategory) : undefined,
+    tags: post.categories.map((c) => categoryName(currLocale, c)),
+  }}
+  jsonLd={jsonLd}
+  preloadImage={post.hero
+    ? { href: mediaUrl(post.hero, 1200), srcset: mediaSrcset(post.hero), sizes: heroSizes }
+    : undefined}
+>
+  <article class="site-container pt-36 md:pt-44">
+    <!-- Blog post info -->
+    <div class="flex w-full flex-col items-center">
+      <div class="mx-auto flex w-full max-w-[800px]">
+        <div class="mx-auto text-center">
+          <!-- Breadcrumbs -->
+          <nav aria-label="Breadcrumb" class="mb-6 text-sm opacity-70">
+            <ol class="flex flex-wrap justify-center gap-1">
+              {
+                crumbs.slice(0, -1).map((c) => (
+                  <li class="after:ml-1 after:content-['/'] last:after:content-['']">
+                    <a href={c.path} class="hover:text-primary-600">{c.name}</a>
+                  </li>
+                ))
+              }
+            </ol>
+          </nav>
+
+          <!-- Categories -->
+          <div class="flex flex-wrap items-center justify-center gap-4">
+            {isGuest && <GuestBadge />}
+            {
+              post.categories.map((category) => (
+                <a
+                  href={categoryPath(currLocale, category)}
+                  class="button button--ghost px-2 py-0.5 font-medium md:px-4 md:py-1"
+                >
+                  {categoryName(currLocale, category)}
+                </a>
+              ))
+            }
+          </div>
+
+          <!-- title -->
+          <h1 class="h1 mt-8">{post.title}</h1>
+
+          <div class="mt-6 flex w-full flex-wrap justify-center gap-4">
+            {
+              author && (
+                <a href={authorPath(currLocale, author.slug)} class="mb-auto flex hover:text-primary-600">
+                  {author.avatar && (
+                    <figure>
+                      <MediaImage
+                        media={author.avatar}
+                        alt={`${author.name}`}
+                        width={480}
+                        sizes="28px"
+                        class="h-7 w-7 rounded-full object-cover"
+                      />
+                    </figure>
+                  )}
+                  <span class="my-auto ml-2 opacity-80">{author.name}</span>
+                </a>
+              )
+            }
+            {guestName && <span class="my-auto opacity-80">{t("by")} {guestName}</span>}
+
+            <span>&bull;</span>
+
+            <time class="my-auto h-full opacity-80" datetime={publishAt.toISOString()}>
+              {formatDate(publishAt, currLocale)}
+            </time>
+
+            <span>&bull;</span>
+            <span class="my-auto opacity-80">{minutes} {t("min_read")}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- blog post main image (LCP: eager + preloaded) -->
+      <div class="mt-6 max-w-[1000px] overflow-hidden">
+        <MediaImage
+          media={post.hero}
+          alt={post.heroAlt || post.title}
+          sizes={heroSizes}
+          width={1200}
+          priority
+          class="max-h-[70vh] rounded-xl object-cover"
+        />
+      </div>
+    </div>
+
+    <!-- article content -->
+    <div class="mt-10 w-full">
+      <div class="mx-auto max-w-2xl">
+        <div class="text-base-content text-base">
+          {
+            modified && (
+              <div class="mb-6 italic">
+                <time datetime={modified.toISOString()}>
+                  {t("updated")}: {formatDate(modified, currLocale)}
+                </time>
+              </div>
+            )
+          }
+          <section id="blog-post-content" class="prose mx-auto md:text-lg" set:html={html} />
+
+          <!-- disclaimer + helplines (E-E-A-T / YMYL) -->
+          <aside class="mt-12 rounded-xl border border-primary-300 bg-primary-100/40 p-5 text-sm md:text-base">
+            <p class="font-medium">{t("disclaimer_title")}</p>
+            <p class="mt-1 opacity-90">{t("disclaimer_text")}</p>
+          </aside>
+
+          <!-- author box (team) or community note (guest story) -->
+          {
+            author && (
+              <section class="mt-10 flex gap-4 rounded-xl bg-base-200/50 p-5">
+                {author.avatar && (
+                  <MediaImage
+                    media={author.avatar}
+                    alt={author.name}
+                    width={480}
+                    sizes="64px"
+                    class="h-16 w-16 shrink-0 rounded-full object-cover"
+                  />
+                )}
+                <div>
+                  <p class="text-sm opacity-70">{t("written_by")}</p>
+                  <a href={authorPath(currLocale, author.slug)} class="text-lg font-medium hover:text-primary-600">
+                    {author.name}
+                  </a>
+                  {bio && <p class="mt-1 text-sm opacity-90">{bio}</p>}
+                </div>
+              </section>
+            )
+          }
+          {
+            isGuest && (
+              <section class="mt-10 rounded-xl bg-base-200/50 p-5">
+                <GuestBadge />
+                <p class="mt-3">
+                  {t("guest_shared_by")} <strong>{guestName ?? "?"}</strong>{t("guest_shared_by_suffix")}
+                </p>
+                <p class="mt-2 text-sm opacity-90">
+                  {t("share_your_story")}{" "}
+                  <a href={`mailto:${storyEmail}`} class="text-primary-600 underline">{storyEmail}</a>
+                </p>
+              </section>
+            )
+          }
+
+          <!-- comments (Disqus, loaded when scrolled into view) -->
+          <h2 class="mt-16 text-xl font-medium">{t("comments")}</h2>
+          <div
+            class="mt-4 min-h-[200px]"
+            id="disqus_thread"
+            data-url={absoluteUrl(canonical)}
+            data-title={post.title}
+            data-lang={currLocale}
+          >
+          </div>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+          <!-- button to go back to all posts -->
+          <div class="mt-16 flex justify-center">
+            <Button variant="outline" href={blogIndex} arrow="left" class="py-2">
+              {t("back_to_all_posts")}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- related posts (internal linking) -->
+    {
+      related.length > 0 && (
+        <section class="mx-auto mt-20 max-w-5xl">
+          <h2 class="h3 text-center">{t("related_posts")}</h2>
+          <div class="mt-8 grid gap-6 md:grid-cols-3">
+            {related.map((p) => <PostCardSmall post={p} headingLevel="h3" />)}
+          </div>
+        </section>
+      )
+    }
+  </article>
+</BaseLayout>
+
+<script>
+  // Disqus: lazy-load when the comment section comes into view, and re-init on view transitions.
+  const w = window as any;
+
+  function setupDisqus() {
+    const el = document.getElementById("disqus_thread");
+    if (!el) return;
+    const { url, title, lang } = el.dataset;
+    const config = function (this: any) {
+      this.page.url = url;
+      this.page.title = title;
+      this.language = lang === "nl" ? "nl" : "en";
+    };
+
+    const load = () => {
+      if (w.DISQUS) {
+        w.DISQUS.reset({ reload: true, config });
+        return;
+      }
+      w.disqus_config = config;
+      const s = document.createElement("script");
+      s.src = "https://feelgood-brothers.disqus.com/embed.js";
+      s.setAttribute("data-timestamp", String(+new Date()));
+      s.async = true;
+      document.body.appendChild(s);
+    };
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          io.disconnect();
+          load();
+        }
+      },
+      { rootMargin: "600px" },
+    );
+    io.observe(el);
+  }
+
+  document.addEventListener("astro:page-load", setupDisqus);
+</script>

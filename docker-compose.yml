@@ -1,0 +1,62 @@
+# Local development / testing: everything in Docker.
+#   cp .env.example .env
+#   docker compose up -d --build
+#   docker compose exec admin node scripts/import-mdx.mjs        # import the old blogs (once)
+#   docker compose exec admin node scripts/create-admin.mjs you@example.com "Mick"
+# Site:  http://localhost:4321    Admin: http://localhost:4322
+name: feelgoodbrothers
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: feelgoodbrothers
+      POSTGRES_USER: fgb
+      POSTGRES_PASSWORD: fgb_local_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fgb -d feelgoodbrothers"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  admin:
+    build:
+      context: .
+      target: admin
+      args:
+        SITE_URL: http://localhost:4321
+    environment:
+      DATABASE_URL: postgres://fgb:fgb_local_dev@postgres:5432/feelgoodbrothers
+      SITE_URL: http://localhost:4321
+      ADMIN_URL: http://localhost:4322
+    ports:
+      - "4322:4322"
+    volumes:
+      - ./uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        SITE_URL: http://localhost:4321
+    environment:
+      DATABASE_URL: postgres://fgb:fgb_local_dev@postgres:5432/feelgoodbrothers
+      SITE_URL: http://localhost:4321
+    ports:
+      - "4321:4321"
+    volumes:
+      - ./uploads:/data/uploads:ro
+    depends_on:
+      admin:
+        condition: service_started
+
+volumes:
+  postgres_data:

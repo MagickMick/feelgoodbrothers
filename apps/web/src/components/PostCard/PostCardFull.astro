@@ -1,0 +1,105 @@
+---
+import MediaImage from "@components/MediaImage/MediaImage.astro";
+import GuestBadge from "@components/GuestBadge/GuestBadge.astro";
+import {
+  categoryName,
+  categoryPath,
+  postPath,
+  type PostWithRelations,
+} from "@js/blogUtils";
+import { formatDate } from "@js/textUtils";
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { useTranslations } from "@js/translationUtils";
+import { bylineName } from "@fgb/core/posts";
+
+interface Props {
+  post: PostWithRelations;
+  showDescription?: boolean;
+  class?: string;
+  headingLevel?: "h2" | "h3";
+  [key: string]: any;
+}
+
+const {
+  post,
+  showDescription = false,
+  class: className,
+  headingLevel: Heading = "h2",
+  ...rest
+} = Astro.props as Props;
+
+const currLocale = getLocaleFromUrl(Astro.url);
+const t = useTranslations(currLocale);
+const byline = bylineName(post);
+const href = postPath(post.locale, post.slug);
+---
+
+<article class={`flex grid gap-4 md:grid-cols-2 md:gap-8 ${className ?? ""}`} {...rest}>
+  <a
+    href={href}
+    class="shrink-0 justify-center overflow-hidden rounded-lg sm:justify-normal"
+    tabindex="-1"
+    aria-hidden="true"
+  >
+    <figure>
+      <MediaImage
+        media={post.hero}
+        alt={post.heroAlt || post.title}
+        width={800}
+        sizes="(min-width: 768px) 50vw, 100vw"
+        class="h-auto max-h-96 w-full rounded-lg object-cover transition-all duration-500 hover:scale-[1.02]"
+      />
+    </figure>
+  </a>
+  <div class="flex w-full flex-col gap-2 md:gap-4">
+    <!-- categories -->
+    <div class="flex flex-wrap items-center gap-4 md:mt-1">
+      {post.kind === "guest" && <GuestBadge />}
+      {
+        post.categories.map((category) => (
+          <a
+            href={categoryPath(currLocale, category)}
+            class="button button--ghost px-2 py-0.5 font-medium md:px-4 md:py-1"
+          >
+            {categoryName(currLocale, category)}
+          </a>
+        ))
+      }
+    </div>
+
+    <!-- title -->
+    <div>
+      <a
+        href={href}
+        class="border-b-2 border-transparent transition duration-300 hover:border-primary-500"
+      >
+        <Heading class="inline text-lg font-medium md:text-2xl lg:text-3xl">
+          {post.title}
+        </Heading>
+      </a>
+    </div>
+
+    <!-- description -->
+    {
+      showDescription && (
+        <p class="description hidden text-sm md:block lg:text-base">
+          {post.description}
+        </p>
+      )
+    }
+
+    <div class="flex flex-wrap gap-1 text-sm opacity-80">
+      {post.publishAt && (
+        <time class="whitespace-nowrap" datetime={post.publishAt.toISOString()}>
+          {formatDate(post.publishAt, currLocale)}
+        </time>
+      )}
+      {byline && (
+        <>
+          <span>&bull;</span>
+          <p class="whitespace-nowrap">{post.kind === "guest" && `${t("by")} `}{byline}</p>
+        </>
+      )}
+    </div>
+  </div>
+</article>

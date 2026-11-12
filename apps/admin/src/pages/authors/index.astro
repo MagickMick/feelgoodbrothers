@@ -1,0 +1,40 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { getDb } from "@fgb/core/db";
+import { authors, posts } from "@fgb/core/schema";
+import { mediaUrl } from "@fgb/core/storage";
+import { asc, eq, sql } from "drizzle-orm";
+
+const db = getDb();
+const rows = await db.query.authors.findMany({ with: { avatar: true }, orderBy: [asc(authors.name)] });
+const counts = await db
+  .select({ authorId: posts.authorId, n: sql<number>`count(*)::int` })
+  .from(posts)
+  .groupBy(posts.authorId);
+const countFor = (id: number) => counts.find((c) => c.authorId === id)?.n ?? 0;
+---
+
+<AdminLayout title="Auteurs">
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-semibold">Auteurs</h1>
+    <a href="/authors/new/" class="btn-primary">+ Nieuwe auteur</a>
+  </div>
+  <p class="mb-4 text-sm text-gray-600">
+    Auteurs zijn het Feelgood Brothers-team; elke auteur krijgt een eigen profielpagina op de site. Verhalen van anderen maak je als <a href="/posts/new/?kind=guest" class="text-brand-600 underline">gastblog</a>: daar vul je alleen een voornaam of pseudoniem in.
+  </p>
+  <div class="grid gap-4 sm:grid-cols-2">
+    {rows.map((a) => (
+      <a href={`/authors/${a.id}/`} class="card flex items-center gap-4 hover:border-brand-500">
+        {a.avatar ? (
+          <img src={mediaUrl(a.avatar, 480)} alt="" class="h-14 w-14 rounded-full object-cover" />
+        ) : (
+          <div class="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-lg">{a.name[0]}</div>
+        )}
+        <div>
+          <p class="font-medium">{a.name}</p>
+          <p class="text-sm text-gray-500">{countFor(a.id)} blogs · /authors/{a.slug}/</p>
+        </div>
+      </a>
+    ))}
+  </div>
+</AdminLayout>

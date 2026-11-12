@@ -1,0 +1,62 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import MediaUploader from "@/components/MediaUploader";
+import { deleteMedia, listMedia, updateMediaAlt, ValidationError } from "@fgb/core/admin";
+import { mediaUrl } from "@fgb/core/storage";
+import { str } from "@/lib/ui";
+
+let error = "";
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const id = Number(str(form, "id"));
+  try {
+    if (str(form, "intent") === "delete") await deleteMedia(id);
+    else await updateMediaAlt(id, str(form, "alt"));
+    return Astro.redirect("/media/");
+  } catch (err) {
+    if (!(err instanceof ValidationError)) throw err;
+    error = err.message;
+  }
+}
+const items = await listMedia();
+---
+
+<AdminLayout title="Media" wide>
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold">Media</h1>
+      <p class="text-sm text-gray-500">Afbeeldingen worden automatisch omgezet naar WebP in meerdere formaten + een 1200×630 social-afbeelding.</p>
+    </div>
+    <MediaUploader client:load />
+  </div>
+  {error && <p class="mb-4 rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+  <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+    {items.map((m) => (
+      <div class="card p-3">
+        <img src={mediaUrl(m, 480)} alt={m.alt} class="aspect-[3/2] w-full rounded object-cover" loading="lazy" />
+        <p class="mt-2 truncate text-xs text-gray-500" title={m.originalName ?? m.key}>{m.width}×{m.height} · {m.originalName}</p>
+        <form method="post" class="mt-2 flex gap-1">
+          <input type="hidden" name="id" value={m.id} />
+          <input class="input py-1 text-xs" name="alt" value={m.alt} placeholder="alt-tekst" />
+          <button class="btn-secondary px-2 py-1 text-xs">✓</button>
+          <button class="btn-secondary px-2 py-1 text-xs text-red-600" name="intent" value="delete" onclick="return confirm('Afbeelding verwijderen?')">✕</button>
+        </form>
+        <button
+          type="button"
+          class="mt-2 text-xs text-brand-600 hover:underline"
+          data-copy={`![${m.alt}](${mediaUrl(m, 1200)})`}
+        >Kopieer markdown</button>
+      </div>
+    ))}
+  </div>
+  <script>
+    document.addEventListener("click", async (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-copy]");
+      if (!btn) return;
+      await navigator.clipboard.writeText(btn.dataset.copy ?? "");
+      const old = btn.textContent;
+      btn.textContent = "Gekopieerd ✓";
+      setTimeout(() => (btn.textContent = old), 1500);
+    });
+  </script>
+</AdminLayout>

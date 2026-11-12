@@ -1,0 +1,54 @@
+---
+// component imports
+import BaseHead, { type Props as HeadProps } from "@layouts/BaseHead.astro";
+import Nav from "@components/Nav/Nav.astro";
+import Footer from "@components/Footer/Footer.astro";
+
+// style import
+import "@/styles/global.scss";
+
+// utils
+import { getLocaleFromUrl } from "@js/localeUtils";
+
+// data
+import siteSettings from "@config/siteSettings.json";
+
+type Props = HeadProps;
+
+const currLocale = getLocaleFromUrl(Astro.url);
+---
+
+<!doctype html>
+<html lang={currLocale} transition:animate="fade">
+  <head>
+    <BaseHead {...(Astro.props as Props)} />
+  </head>
+  <body
+    id="body"
+    class={`bg-base-50 ${
+      siteSettings.useAnimations === true ? "use-animations" : ""
+    }`}
+  >
+    <div class="min-h-[100lvh]">
+      <Nav />
+      <main>
+        <slot />
+      </main>
+    </div>
+    <Footer />
+
+    <!-- Scroll animations -->
+    <script>
+      import siteSettings from "@config/siteSettings.json";
+      import AOS from "@js/aos/aos";
+
+      if (siteSettings.useAnimations === true) {
+        // runs on initial page load
+        AOS.init({ once: true, duration: 0.75, distance: 15, offset: 120 });
+
+        // runs on view transitions navigation
+        document.addEventListener("astro:after-swap", AOS.refreshHard);
+      }
+    </script>
+  </body>
+</html>
