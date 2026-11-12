@@ -12,6 +12,11 @@ export default defineConfig({
   adapter: node({ mode: "standalone" }),
   trailingSlash: "ignore", // middleware redirects to the trailing-slash version (same URLs as the old site)
   build: { format: "directory" },
+  // the old template contact pages were removed; keep their URLs from returning 404
+  redirects: {
+    "/contact": { status: 301, destination: "/" },
+    "/nl/contact": { status: 301, destination: "/nl/" },
+  },
   // Astro 7's HTML compression strips whitespace between text and inline elements
   // on the next line ("but <span>human</span>" -> "buthuman"). gzip/brotli make the difference negligible.
   compressHTML: false,

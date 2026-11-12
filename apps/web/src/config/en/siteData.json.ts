@@ -9,13 +9,13 @@ const siteData: SiteDataProps = {
   description:
     "Discover personal stories of mental health struggles from the Feelgood Brothers, sharing hope, support, and ways to navigate life's challenges.",
 
-  // used on contact page and footer
+  // used in the footer
   contact: {
     heading: "Questions?",
     email: "info@feelgoodbrothers.com",
   },
 
-  // used on contact page and footer
+  // used in the footer
   story: {
     heading: "Share your story?",
     email: "story@feelgoodbrothers.com",

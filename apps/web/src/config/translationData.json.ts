@@ -107,12 +107,10 @@ export const routeTranslations = {
     aboutKey: "about",
     categorieKey: "categories",
     blogKey: "blog",
-    contactKey: "contact",
   },
   nl: {
     aboutKey: "over-ons",
     categorieKey: "categorieen",
     blogKey: "blog",
-    contactKey: "contact",
   },
 } as const;

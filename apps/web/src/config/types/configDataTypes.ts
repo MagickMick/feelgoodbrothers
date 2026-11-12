@@ -4,12 +4,12 @@ export interface SiteDataProps {
   title: string;
   description: string;
   contact: {
-    // used for contact page and footer
+    // used in the footer
     heading: string // contact heading
     email: string; // contact email address
   };
   story: {
-    // used for contact page and footer
+    // used in the footer
     heading: string // contact heading
     email: string; // contact email address
   };

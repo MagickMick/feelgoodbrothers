@@ -9,13 +9,13 @@ const siteData: SiteDataProps = {
   description:
     "Ontdek persoonlijke verhalen over mentale uitdagingen van de Feelgood Brothers, vol hoop, steun en manieren om de uitdagingen van het leven aan te gaan.",
 
-  // used on contact page and footer
+  // used in the footer
   contact: {
     heading: "Vragen?",
     email: "info@feelgoodbrothers.com",
   },
 
-  // used on contact page and footer
+  // used in the footer
   story: {
     heading: "Jouw verhaal delen?",
     email: "story@feelgoodbrothers.com",
