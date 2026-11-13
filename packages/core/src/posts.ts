@@ -91,9 +91,9 @@ function shape(p: RawPost): PostWithRelations {
   };
 }
 
-/** for the public site: drop internal guest data so it can never end up in a page */
+/** for the public site: drop internal data (guest details, AI draft) so it can never end up in a page */
 function publicShape(p: RawPost): PostWithRelations {
-  return { ...shape(p), guestEmail: null, guestConsentAt: null, guestNote: null };
+  return { ...shape(p), guestEmail: null, guestConsentAt: null, guestNote: null, aiDraftBody: null, aiSessionId: null };
 }
 
 export interface LivePostsOptions {

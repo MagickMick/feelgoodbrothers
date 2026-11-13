@@ -3,6 +3,7 @@
 #   docker compose up -d --build
 #   docker compose exec admin node scripts/import-mdx.mjs        # import the old blogs (once)
 #   docker compose exec admin node scripts/create-admin.mjs you@example.com "Mick"
+# AI keys for the writing assistant: create a .env next to this file with OPENAI_API_KEY=... (never commit it)
 # Site:  http://localhost:4321    Admin: http://localhost:4322
 name: feelgoodbrothers
 
@@ -33,6 +34,12 @@ services:
       DATABASE_URL: postgres://fgb:fgb_local_dev@postgres:5432/feelgoodbrothers
       SITE_URL: http://localhost:4321
       ADMIN_URL: http://localhost:4322
+      # writing assistant: put keys in a local .env (gitignored); without keys the test provider is used
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
     ports:
       - "4322:4322"
     volumes:

@@ -1,0 +1,79 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { deleteSituation, listSituations, saveSituation } from "@fgb/core/ai";
+import { ValidationError } from "@fgb/core/admin";
+import { getAllCategories } from "@fgb/core/posts";
+import { str } from "@/lib/ui";
+
+let error = "";
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const id = Number(str(form, "id")) || null;
+  try {
+    if (str(form, "intent") === "delete" && id) await deleteSituation(id);
+    else
+      await saveSituation(id, {
+        categoryId: Number(str(form, "categoryId")),
+        labelEn: str(form, "labelEn"),
+        labelNl: str(form, "labelNl"),
+        hintEn: str(form, "hintEn"),
+        hintNl: str(form, "hintNl"),
+        active: form.get("active") === "on",
+      });
+    return Astro.redirect("/situations/");
+  } catch (err) {
+    if (!(err instanceof ValidationError)) throw err;
+    error = err.message;
+  }
+}
+
+const [categories, situations] = await Promise.all([getAllCategories(), listSituations()]);
+---
+
+<AdminLayout title="Situaties">
+  <a href="/ai/" class="text-sm text-gray-500 hover:text-gray-800">← Schrijfhulp</a>
+  <h1 class="mb-2 mt-1 text-2xl font-semibold">Situaties</h1>
+  <p class="mb-6 text-sm text-gray-600">
+    Herkenbare momenten per categorie waar de schrijfhulp een opzet over maakt. Met "willekeurig" kiest hij een situatie die je nog niet (of het minst) hebt gebruikt.
+  </p>
+  {error && <p class="mb-4 rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+
+  <form method="post" class="card mb-8 grid gap-3 border-dashed md:grid-cols-2">
+    <h2 class="font-semibold md:col-span-2">+ Nieuwe situatie</h2>
+    <select name="categoryId" class="input" required>
+      {categories.map((c) => <option value={c.id}>{c.nameNl} / {c.nameEn}</option>)}
+    </select>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="active" checked class="rounded border-gray-300" /> Actief</label>
+    <input class="input" name="labelNl" placeholder="🇳🇱 bv. In de wachtkamer bij de huisarts" required />
+    <input class="input" name="labelEn" placeholder="🇺🇸 e.g. In the waiting room at the doctor's office" required />
+    <input class="input" name="hintNl" placeholder="Extra context NL (optioneel)" />
+    <input class="input" name="hintEn" placeholder="Extra context EN (optioneel)" />
+    <button class="btn-primary md:col-span-2 md:justify-self-start">Toevoegen</button>
+  </form>
+
+  {categories.map((c) => {
+    const list = situations.filter((s) => s.categoryId === c.id);
+    return list.length > 0 && (
+      <section class="mb-6">
+        <h2 class="mb-2 font-semibold">{c.nameNl} <span class="font-normal text-gray-500">/ {c.nameEn}</span></h2>
+        <div class="space-y-2">
+          {list.map((s) => (
+            <form method="post" class:list={["card grid items-center gap-2 p-3 md:grid-cols-[1fr_1fr_auto]", !s.active && "opacity-60"]}>
+              <input type="hidden" name="id" value={s.id} />
+              <input type="hidden" name="categoryId" value={s.categoryId} />
+              <input type="hidden" name="hintEn" value={s.hintEn} />
+              <input type="hidden" name="hintNl" value={s.hintNl} />
+              <input class="input py-1 text-sm" name="labelNl" value={s.labelNl} />
+              <input class="input py-1 text-sm" name="labelEn" value={s.labelEn} />
+              <div class="flex items-center gap-2 text-sm">
+                <label class="flex items-center gap-1"><input type="checkbox" name="active" checked={s.active} class="rounded border-gray-300" /> actief</label>
+                <button class="btn-secondary px-2 py-1 text-xs">Opslaan</button>
+                <button class="px-1 text-xs text-red-600" name="intent" value="delete" onclick="return confirm('Situatie verwijderen?')">✕</button>
+              </div>
+            </form>
+          ))}
+        </div>
+      </section>
+    );
+  })}
+</AdminLayout>

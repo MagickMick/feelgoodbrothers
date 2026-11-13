@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -83,6 +84,8 @@ export const posts = pgTable(
     body: text("body").notNull().default(""),
     heroId: integer("hero_id").references(() => media.id, { onDelete: "set null" }),
     heroAlt: text("hero_alt").notNull().default(""),
+    /** the hero photo is illustrative (stock/mood), not taken during the story: shown as a caption */
+    heroIllustrative: boolean("hero_illustrative").notNull().default(false),
     authorId: integer("author_id").references(() => authors.id, { onDelete: "set null" }),
     kind: postKindEnum("kind").notNull().default("team"),
     /** guest stories: the only public detail is this first name or pseudonym */
@@ -105,6 +108,9 @@ export const posts = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     /** last meaningful content change, used for dateModified / sitemap lastmod */
     contentUpdatedAt: timestamp("content_updated_at", { withTimezone: true }),
+    /** AI writing assistant: the session this draft came from and the original AI text (marks the post as an AI draft) */
+    aiSessionId: integer("ai_session_id"),
+    aiDraftBody: text("ai_draft_body"),
   },
   (t) => [
     uniqueIndex("posts_locale_slug_idx").on(t.locale, t.slug),
@@ -125,6 +131,77 @@ export const postCategories = pgTable(
       .references(() => categories.id, { onDelete: "cascade" }),
   },
   (t) => [primaryKey({ columns: [t.postId, t.categoryId] })],
+);
+
+// ---------------------------------------------------------------------------
+// AI writing assistant
+// ---------------------------------------------------------------------------
+/** recognisable situations per category ("packed concert", "long line at the supermarket") */
+export const situations = pgTable(
+  "situations",
+  {
+    id: serial("id").primaryKey(),
+    categoryId: integer("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    labelEn: text("label_en").notNull(),
+    labelNl: text("label_nl").notNull(),
+    hintEn: text("hint_en").notNull().default(""),
+    hintNl: text("hint_nl").notNull().default(""),
+    active: boolean("active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [index("situations_category_idx").on(t.categoryId)],
+);
+
+export interface AiMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AiSessionParams {
+  categoryIds: number[];
+  situationId: number | null;
+  situationText: string;
+  persona: string;
+  length: "short" | "medium" | "long";
+  helps: string;
+  wishes: string;
+  placeholders: boolean;
+}
+
+export const aiSessions = pgTable("ai_sessions", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").references(() => posts.id, { onDelete: "set null" }),
+  locale: localeEnum("locale").notNull(),
+  params: jsonb("params").$type<AiSessionParams>().notNull(),
+  messages: jsonb("messages").$type<AiMessage[]>().notNull().default([]),
+  provider: text("provider").notNull(),
+  model: text("model").notNull(),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  /** per-session lock so two tabs can't run a turn at the same time (token of the running turn) */
+  turnLock: text("turn_lock"),
+  turnStartedAt: timestamp("turn_started_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** one row per AI call (generate, revise, translate): the source for usage reporting */
+export const aiUsage = pgTable(
+  "ai_usage",
+  {
+    id: serial("id").primaryKey(),
+    sessionId: integer("session_id").references(() => aiSessions.id, { onDelete: "set null" }),
+    postId: integer("post_id").references(() => posts.id, { onDelete: "set null" }),
+    kind: text("kind").$type<"generate" | "revise" | "translate">().notNull(),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ai_usage_created_idx").on(t.createdAt)],
 );
 
 // ---------------------------------------------------------------------------
@@ -190,3 +267,6 @@ export type Author = typeof authors.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type Media = typeof media.$inferSelect;
 export type AdminUser = typeof adminUsers.$inferSelect;
+
+export type Situation = typeof situations.$inferSelect;
+export type AiSession = typeof aiSessions.$inferSelect;

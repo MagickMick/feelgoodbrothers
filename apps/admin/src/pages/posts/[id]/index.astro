@@ -10,6 +10,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { inputToEditorPost, parsePostForm, toEditorPost } from "@/lib/postForm";
 import { heroUrlFor, loadEditorOptions } from "@/lib/editorData";
 import { FLAGS, siteUrl, statusInfo, str } from "@/lib/ui";
+import { availableProviders, PROVIDER_LABELS } from "@fgb/core/ai/provider";
 
 const id = Number(Astro.params.id);
 const existing = Number.isFinite(id) ? await getPostById(id) : null;
@@ -40,6 +41,10 @@ const [translation] = await getDb()
 
 const s = statusInfo(existing.status, existing.publishAt);
 const saved = Astro.url.searchParams.get("saved") === "1";
+const translatedByAi = Astro.url.searchParams.get("translated") === "ai";
+const urlError = Astro.url.searchParams.get("error");
+const aiProviders = availableProviders().filter((p) => p !== "mock" || availableProviders().length === 1);
+const otherLang = existing.locale === "en" ? "Nederlandse" : "Engelse";
 const liveUrl = siteUrl() + postPath(existing.locale, existing.slug);
 ---
 
@@ -60,13 +65,29 @@ const liveUrl = siteUrl() + postPath(existing.locale, existing.slug);
       {translation ? (
         <a href={`/posts/${translation.id}/`} class="btn-secondary">{FLAGS[translation.locale]} versie bewerken →</a>
       ) : (
-        <form method="post" action={`/posts/${id}/translate/`}>
-          <button class="btn-secondary">+ Maak {existing.locale === "en" ? "Nederlandse" : "Engelse"} versie</button>
+        <>
+        <form method="post" action={`/posts/${id}/translate/`} class="translate-form flex items-center gap-1">
+          <input type="hidden" name="mode" value="ai" />
+          {aiProviders.length > 1 && (
+            <select name="provider" class="input w-auto py-1.5 text-sm">
+              {aiProviders.map((p) => <option value={p}>{PROVIDER_LABELS[p]}</option>)}
+            </select>
+          )}
+          {aiProviders.length === 1 && <input type="hidden" name="provider" value={aiProviders[0]} />}
+          <button class="btn-secondary">✨ Vertaal met AI naar {otherLang}</button>
         </form>
+        <form method="post" action={`/posts/${id}/translate/`}>
+          <button class="btn-secondary" title="Maakt een kopie in de andere taal die je zelf vertaalt">+ {otherLang} versie (kopie)</button>
+        </form>
+        </>
       )}
     </div>
   </div>
 
+  {translatedByAi && (
+    <p class="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800">✨ Vertaald met AI als concept. Lees het na voordat je publiceert.</p>
+  )}
+  {urlError && <p class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{urlError}</p>}
   {saved && Object.keys(errors).length === 0 && (
     <p class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-800">✓ Opgeslagen</p>
   )}
@@ -89,4 +110,16 @@ const liveUrl = siteUrl() + postPath(existing.locale, existing.slug);
   >
     <button class="text-sm text-red-600 hover:underline">Blog verwijderen</button>
   </form>
+  <script>
+    // AI translation takes a little while: show progress and prevent double submits
+    document.querySelectorAll<HTMLFormElement>(".translate-form").forEach((form) => {
+      form.addEventListener("submit", () => {
+        const btn = form.querySelector("button");
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Bezig met vertalen… (± 30 sec)";
+        }
+      });
+    });
+  </script>
 </AdminLayout>

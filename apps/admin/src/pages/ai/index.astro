@@ -1,0 +1,110 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import AiStudio from "@/components/AiStudio";
+import { getSession, listRecentSessions, listSituations, usageSince } from "@fgb/core/ai";
+import { availableProviders, defaultProvider, modelFor, PROVIDER_LABELS } from "@fgb/core/ai/provider";
+import { getAllCategories } from "@fgb/core/posts";
+import { ADMIN_TZ, formatDateTime, localInputToDate } from "@fgb/core/time";
+import { parseDraft } from "@fgb/core/ai/prompts";
+
+const [categories, situations, recent] = await Promise.all([
+  getAllCategories(),
+  listSituations({ activeOnly: true }),
+  listRecentSessions(12),
+]);
+// start of the current month in the editor's timezone (the server runs in UTC)
+const ym = new Intl.DateTimeFormat("en-CA", { timeZone: ADMIN_TZ, year: "numeric", month: "2-digit" }).format(new Date());
+const monthStart = localInputToDate(`${ym}-01T00:00`)!;
+const usage = await usageSince(monthStart);
+
+const providers = availableProviders().map((id) => ({ id, label: `${PROVIDER_LABELS[id]} (${modelFor(id)})`, model: modelFor(id) }));
+const onlyMock = providers.length === 1 && providers[0].id === "mock";
+
+// resume an earlier session (?session=ID)
+let resume = null;
+const sid = Number(Astro.url.searchParams.get("session"));
+if (sid) {
+  const s = await getSession(sid);
+  if (s) {
+    const lastAssistant = [...s.messages].reverse().find((m) => m.role === "assistant");
+    const sit = situations.find((x) => x.id === s.params.situationId);
+    resume = {
+      sessionId: s.id,
+      locale: s.locale,
+      categoryIds: s.params.categoryIds,
+      situationLabel: s.params.situationText || (sit ? (s.locale === "nl" ? sit.labelNl : sit.labelEn) : ""),
+      lastDraft: lastAssistant?.content ?? "",
+      // user turns after the first are feedback; strip the instruction we appended
+      feedback: s.messages
+        .filter((m) => m.role === "user")
+        .slice(1)
+        .map((m) => m.content.replace(/\n\n\(Apply this feedback[\s\S]*$/, "")),
+      postId: s.postId,
+      provider: s.provider,
+    };
+  }
+}
+
+function sessionTitle(content: string | undefined) {
+  if (!content) return "(nog geen opzet)";
+  return parseDraft(content).title || "(zonder titel)";
+}
+---
+
+<AdminLayout title="Schrijfhulp" wide>
+  <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold">✨ Schrijfhulp</h1>
+      <p class="text-sm text-gray-500">
+        AI schrijft een opzet in de ik-vorm. Jij maakt er een echt verhaal van in de editor, en pas dan gaat het live.
+      </p>
+    </div>
+    <p class="text-xs text-gray-500">
+      Deze maand: {usage.calls} AI-aanroepen · {(usage.inputTokens / 1000).toFixed(1)}k in / {(usage.outputTokens / 1000).toFixed(1)}k uit tokens
+    </p>
+  </div>
+
+  {onlyMock && (
+    <p class="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+      Er is nog geen AI-key ingesteld: je ziet nu de testmodus met een vaste voorbeeldtekst. Zet <code>OPENAI_API_KEY</code> (of <code>ANTHROPIC_API_KEY</code>) in de .env om echte opzetten te maken.
+    </p>
+  )}
+
+  <AiStudio
+    client:load
+    categories={categories.map((c) => ({ id: c.id, nameEn: c.nameEn, nameNl: c.nameNl }))}
+    situations={situations.map((s) => ({ id: s.id, categoryId: s.categoryId, labelEn: s.labelEn, labelNl: s.labelNl }))}
+    providers={providers}
+    defaultProvider={defaultProvider()}
+    resume={resume}
+  />
+
+  {recent.length > 0 && (
+    <section class="mt-10">
+      <h2 class="mb-3 font-semibold">Recente opzetten</h2>
+      <div class="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <table class="min-w-full divide-y divide-gray-100 text-sm">
+          <tbody class="divide-y divide-gray-100">
+            {recent.map((s) => {
+              const last = [...s.messages].reverse().find((m) => m.role === "assistant");
+              return (
+                <tr>
+                  <td class="px-4 py-2">{s.locale === "nl" ? "🇳🇱" : "🇺🇸"} {sessionTitle(last?.content)}</td>
+                  <td class="px-4 py-2 text-gray-500">{formatDateTime(s.updatedAt)}</td>
+                  <td class="px-4 py-2 text-gray-500">{s.model}</td>
+                  <td class="px-4 py-2 text-right">
+                    {s.postId ? (
+                      <a href={`/posts/${s.postId}/`} class="text-brand-600 hover:underline">Concept →</a>
+                    ) : last ? (
+                      <a href={`/ai/?session=${s.id}`} class="text-brand-600 hover:underline">Verder →</a>
+                    ) : null}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+</AdminLayout>

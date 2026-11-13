@@ -61,13 +61,14 @@ export const textTranslations = {
     posts_by: "Stories by",
     comments: "Comments",
     guest_story: "Guest story",
+    illustrative_photo: "Illustrative photo, not taken during the moment described in this story.",
     by: "by",
     guest_shared_by: "This story was shared by",
     guest_shared_by_suffix: ", a member of our community. Names are first names or pseudonyms.",
     share_your_story: "Want to share your story too? Email us at",
     disclaimer_title: "Not medical advice",
     disclaimer_text:
-      "This is a personal experience, not professional advice. Are you struggling or having thoughts of suicide? In the US call or text 988 (Suicide & Crisis Lifeline). Outside the US, contact your local emergency number or a crisis line.",
+      "This is a personal experience, not professional advice. Do you recognize yourself in this story? It can really help to talk to your doctor or a mental health professional. You don't have to figure it out on your own.",
   },
   nl: {
     hero_description:
@@ -83,13 +84,14 @@ export const textTranslations = {
     posts_by: "Verhalen van",
     comments: "Reacties",
     guest_story: "Gastblog",
+    illustrative_photo: "Sfeerfoto ter illustratie, niet gemaakt tijdens het moment uit dit verhaal.",
     by: "door",
     guest_shared_by: "Dit verhaal is gedeeld door",
     guest_shared_by_suffix: " uit onze community. We gebruiken alleen een voornaam of pseudoniem.",
     share_your_story: "Wil jij ook je verhaal delen? Mail ons via",
     disclaimer_title: "Geen medisch advies",
     disclaimer_text:
-      "Dit is een persoonlijke ervaring, geen professioneel advies. Zit je ermee of denk je aan zelfmoord? Bel 113 of 0800-0113 (gratis, 24/7) of chat via 113.nl. Bij direct gevaar: bel 112.",
+      "Dit is een persoonlijke ervaring, geen professioneel advies. Herken je jezelf in dit verhaal? Dan kan het goed zijn om professionele hulp te zoeken, bijvoorbeeld via je huisarts. Je hoeft het niet alleen uit te zoeken.",
   },
 } as const;
 

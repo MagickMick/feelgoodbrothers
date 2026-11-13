@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from "react";
-import { marked } from "marked";
+import { useEffect, useRef, useState } from "react";
+import { renderPreview } from "@/lib/safeMarkdown";
+import { countPlaceholders } from "@fgb/core/ai/prompts";
 
 export interface EditorPost {
   id?: number;
@@ -11,6 +12,7 @@ export interface EditorPost {
   heroId: number | null;
   heroUrl: string | null;
   heroAlt: string;
+  heroIllustrative: boolean;
   authorId: number | null;
   kind: "team" | "guest";
   guestName: string;
@@ -27,6 +29,8 @@ export interface EditorPost {
   canonicalUrl: string;
   noindex: boolean;
   translationGroup?: string;
+  /** set when the post started as an AI draft */
+  aiDraftBody: string | null;
 }
 
 interface Props {
@@ -107,7 +111,13 @@ export default function PostEditor({ post, authors, categories, errors, siteUrl,
   const fullTitle = effectiveTitle.toLowerCase().includes("feelgood brothers") ? effectiveTitle : effectiveTitle + BRAND;
   const effectiveDescription = (metaDescription || description).trim();
   const words = wordCount(body);
-  const previewHtml = useMemo(() => (tab === "preview" ? (marked.parse(body, { async: false }) as string) : ""), [body, tab]);
+  const placeholdersOpen = countPlaceholders(`${title}\n${description}\n${body}`);
+  const isAiDraft = Boolean(post.aiDraftBody);
+  // sanitized preview, built in the browser only (see lib/safeMarkdown.ts)
+  const [previewHtml, setPreviewHtml] = useState("");
+  useEffect(() => {
+    if (tab === "preview") setPreviewHtml(renderPreview(body));
+  }, [body, tab]);
 
   const checks: { ok: boolean; text: string }[] = [
     { ok: fullTitle.length >= 30 && fullTitle.length <= 65, text: `SEO-titel 30-65 tekens (nu ${fullTitle.length})` },
@@ -125,6 +135,7 @@ export default function PostEditor({ post, authors, categories, errors, siteUrl,
     { ok: /^##\s/m.test(body), text: "Tussenkoppen (##) gebruikt" },
     { ok: slug.length > 0 && slug.length <= 75, text: "Korte, leesbare slug" },
     { ok: hasTranslation, text: `Vertaling (${locale === "en" ? "NL" : "EN"}) gekoppeld` },
+    { ok: placeholdersOpen === 0, text: placeholdersOpen ? `${placeholdersOpen} open invulpunt(en) [[…]]` : "Geen open invulpunten" },
   ];
 
   function markDirty() {
@@ -220,6 +231,16 @@ export default function PostEditor({ post, authors, categories, errors, siteUrl,
 
       {/* main column */}
       <div className="space-y-6 lg:col-span-2">
+        {isAiDraft && (
+          <div className={`rounded-lg border p-4 text-sm ${placeholdersOpen === 0 ? "border-green-200 bg-green-50 text-green-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+            <p className="font-medium">✨ Dit is een AI-opzet: maak het je eigen voordat je publiceert.</p>
+            <p className="mt-1">
+              {placeholdersOpen > 0
+                ? `Nog ${placeholdersOpen} invulpunt${placeholdersOpen === 1 ? "" : "en"} [[…]] om in te vullen; publiceren kan pas als ze weg zijn.`
+                : "Alle invulpunten zijn ingevuld."}
+            </p>
+          </div>
+        )}
         <div className="card space-y-4">
           <div>
             <label className="label" htmlFor="title">Titel</label>
@@ -439,6 +460,15 @@ export default function PostEditor({ post, authors, categories, errors, siteUrl,
             <label className="label" htmlFor="heroAlt">Alt-tekst (wat staat er op de foto?)</label>
             <input id="heroAlt" name="heroAlt" className="input" value={heroAlt} onChange={(e) => setHeroAlt(e.target.value)} />
           </div>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="heroIllustrative" defaultChecked={post.heroIllustrative} className="mt-0.5 rounded border-gray-300" />
+            <span>
+              Sfeerfoto, niet echt
+              <span className="block text-xs text-gray-500">
+                Onder de foto komt dan klein: "Sfeerfoto ter illustratie, niet gemaakt tijdens het moment uit dit verhaal."
+              </span>
+            </span>
+          </label>
         </div>
 
         <div className="card space-y-3">

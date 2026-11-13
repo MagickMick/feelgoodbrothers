@@ -18,6 +18,7 @@ import {
 import { categoryPath, postPath } from "./posts.ts";
 import { slugify } from "./text.ts";
 import { deleteImageFiles, processImage } from "./storage.ts";
+import { countPlaceholders } from "./ai/prompts.ts";
 import { notifyContentChanged } from "./notify.ts";
 
 export class ValidationError extends Error {
@@ -37,6 +38,7 @@ export interface PostInput {
   body: string;
   heroId: number | null;
   heroAlt: string;
+  heroIllustrative: boolean;
   authorId: number | null;
   kind: PostKind;
   /** guest stories: first name or pseudonym, the only public detail */
@@ -84,6 +86,9 @@ function validate(input: PostInput): void {
     if (!input.description.trim()) errors.description = "Omschrijving is verplicht om te publiceren";
     if (!input.body.trim()) errors.body = "De blog is nog leeg";
     if (!input.heroId) errors.heroId = "Kies een hoofdafbeelding om te publiceren";
+    const open = countPlaceholders(`${input.title}\n${input.description}\n${input.body}`);
+    if (open > 0)
+      errors.body = `Er ${open === 1 ? "staat nog 1 invulpunt" : `staan nog ${open} invulpunten`} [[...]] in de tekst. Vul ze in of haal ze weg voor je publiceert.`;
   }
   if (input.kind === "guest") {
     if (input.guestName.length > 40) errors.guestName = "Houd het bij een voornaam of pseudoniem (max 40 tekens)";
@@ -154,6 +159,7 @@ export async function savePost(id: number | null, raw: PostInput): Promise<numbe
     body: input.body,
     heroId: input.heroId,
     heroAlt: input.heroAlt,
+    heroIllustrative: input.heroIllustrative,
     kind: input.kind,
     // a guest story never has a team author; a team post never shows a guest name
     authorId: input.kind === "guest" ? null : input.authorId,
@@ -252,6 +258,7 @@ export async function createTranslationDraft(id: number): Promise<number> {
       body: source.body,
       heroId: source.heroId,
       heroAlt: source.heroAlt,
+      heroIllustrative: source.heroIllustrative,
       authorId: source.authorId,
       kind: source.kind,
       guestName: source.guestName,

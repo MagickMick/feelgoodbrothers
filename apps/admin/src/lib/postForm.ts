@@ -16,6 +16,7 @@ export function parsePostForm(form: FormData): PostInput {
     body: str(form, "body").replace(/\r\n/g, "\n"),
     heroId: num(form, "heroId"),
     heroAlt: str(form, "heroAlt"),
+    heroIllustrative: form.get("heroIllustrative") === "on",
     authorId: num(form, "authorId"),
     kind: str(form, "kind") === "guest" ? "guest" : "team",
     guestName: str(form, "guestName"),
@@ -45,6 +46,7 @@ export function toEditorPost(p: PostWithRelations): EditorPost {
     heroId: p.heroId,
     heroUrl: p.hero ? mediaUrl(p.hero, 800) : null,
     heroAlt: p.heroAlt,
+    heroIllustrative: p.heroIllustrative,
     authorId: p.authorId,
     kind: p.kind,
     guestName: p.guestName ?? "",
@@ -60,6 +62,7 @@ export function toEditorPost(p: PostWithRelations): EditorPost {
     canonicalUrl: p.canonicalUrl ?? "",
     noindex: p.noindex,
     translationGroup: p.translationGroup,
+    aiDraftBody: p.aiDraftBody,
   };
 }
 
@@ -80,6 +83,7 @@ export function inputToEditorPost(
     heroId: input.heroId,
     heroUrl,
     heroAlt: input.heroAlt,
+    heroIllustrative: input.heroIllustrative,
     authorId: input.authorId,
     kind: input.kind,
     guestName: input.guestName,
@@ -95,5 +99,6 @@ export function inputToEditorPost(
     canonicalUrl: input.canonicalUrl,
     noindex: input.noindex,
     translationGroup: input.translationGroup,
+    aiDraftBody: base.aiDraftBody ?? null,
   };
 }

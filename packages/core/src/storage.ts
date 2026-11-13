@@ -6,8 +6,8 @@
  *   <key>-og.jpg         1200x630 crop for Open Graph / X cards
  *
  * Files are immutable (unique key per upload), so they can be cached forever
- * by browsers / Cloudflare. nginx serves /media/* straight from the volume;
- * the apps also have a /media route as a fallback for local dev.
+ * by browsers / Cloudflare. The apps serve /media/* (this module's serveMediaFile);
+ * in production nginx caches those responses.
  *
  * All file access goes through this module, so switching to S3/R2 later only
  * means changing this file.

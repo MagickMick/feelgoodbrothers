@@ -175,16 +175,21 @@ const bio = author ? (currLocale === "nl" ? author.bioNl : author.bioEn) : "";
       </div>
 
       <!-- blog post main image (LCP: eager + preloaded) -->
-      <div class="mt-6 max-w-[1000px] overflow-hidden">
-        <MediaImage
-          media={post.hero}
-          alt={post.heroAlt || post.title}
-          sizes={heroSizes}
-          width={1200}
-          priority
-          class="max-h-[70vh] rounded-xl object-cover"
-        />
-      </div>
+      <figure class="mt-6 max-w-[1000px]">
+        <div class="overflow-hidden">
+          <MediaImage
+            media={post.hero}
+            alt={post.heroAlt || post.title}
+            sizes={heroSizes}
+            width={1200}
+            priority
+            class="max-h-[70vh] rounded-xl object-cover"
+          />
+        </div>
+        {post.heroIllustrative && post.hero && (
+          <figcaption class="mt-2 text-center text-xs italic opacity-60">{t("illustrative_photo")}</figcaption>
+        )}
+      </figure>
     </div>
 
     <!-- article content -->

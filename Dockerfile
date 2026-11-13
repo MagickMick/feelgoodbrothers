@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 # One Dockerfile, two images:
-#   docker build --target web   -t magickmick/feelgoodbrothers-web .
-#   docker build --target admin -t magickmick/feelgoodbrothers-admin .
+#   docker build --target web   -t feelgoodbrothers-web .
+#   docker build --target admin -t feelgoodbrothers-admin .
 
 ARG NODE_IMAGE=node:24-alpine
 
