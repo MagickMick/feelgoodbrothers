@@ -18,6 +18,7 @@ let post: EditorPost = {
   heroId: null,
   heroUrl: null,
   heroAlt: "",
+  heroIllustrative: false,
   authorId: authors[0]?.id ?? null,
   kind: Astro.url.searchParams.get("kind") === "guest" ? "guest" : "team",
   guestName: "",

@@ -84,6 +84,8 @@ export const posts = pgTable(
     body: text("body").notNull().default(""),
     heroId: integer("hero_id").references(() => media.id, { onDelete: "set null" }),
     heroAlt: text("hero_alt").notNull().default(""),
+    /** the hero photo is illustrative (stock/mood), not taken during the story: shown as a caption */
+    heroIllustrative: boolean("hero_illustrative").notNull().default(false),
     authorId: integer("author_id").references(() => authors.id, { onDelete: "set null" }),
     kind: postKindEnum("kind").notNull().default("team"),
     /** guest stories: the only public detail is this first name or pseudonym */

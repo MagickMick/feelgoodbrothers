@@ -12,6 +12,7 @@ export interface EditorPost {
   heroId: number | null;
   heroUrl: string | null;
   heroAlt: string;
+  heroIllustrative: boolean;
   authorId: number | null;
   kind: "team" | "guest";
   guestName: string;
@@ -459,6 +460,15 @@ export default function PostEditor({ post, authors, categories, errors, siteUrl,
             <label className="label" htmlFor="heroAlt">Alt-tekst (wat staat er op de foto?)</label>
             <input id="heroAlt" name="heroAlt" className="input" value={heroAlt} onChange={(e) => setHeroAlt(e.target.value)} />
           </div>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="heroIllustrative" defaultChecked={post.heroIllustrative} className="mt-0.5 rounded border-gray-300" />
+            <span>
+              Sfeerfoto, niet echt
+              <span className="block text-xs text-gray-500">
+                Onder de foto komt dan klein: "Sfeerfoto ter illustratie, niet gemaakt tijdens het moment uit dit verhaal."
+              </span>
+            </span>
+          </label>
         </div>
 
         <div className="card space-y-3">

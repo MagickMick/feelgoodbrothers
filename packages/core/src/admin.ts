@@ -38,6 +38,7 @@ export interface PostInput {
   body: string;
   heroId: number | null;
   heroAlt: string;
+  heroIllustrative: boolean;
   authorId: number | null;
   kind: PostKind;
   /** guest stories: first name or pseudonym, the only public detail */
@@ -158,6 +159,7 @@ export async function savePost(id: number | null, raw: PostInput): Promise<numbe
     body: input.body,
     heroId: input.heroId,
     heroAlt: input.heroAlt,
+    heroIllustrative: input.heroIllustrative,
     kind: input.kind,
     // a guest story never has a team author; a team post never shows a guest name
     authorId: input.kind === "guest" ? null : input.authorId,
@@ -256,6 +258,7 @@ export async function createTranslationDraft(id: number): Promise<number> {
       body: source.body,
       heroId: source.heroId,
       heroAlt: source.heroAlt,
+      heroIllustrative: source.heroIllustrative,
       authorId: source.authorId,
       kind: source.kind,
       guestName: source.guestName,
