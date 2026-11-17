@@ -2,11 +2,14 @@
  * Create or update an admin user.
  *   npm run create-admin -- you@example.com "Your Name"
  * The password is read from ADMIN_PASSWORD or prompted (hidden).
+ * Setting a password logs the user out everywhere (sessions, remembered devices, pending
+ * login codes) and lifts any login lockout for that account.
  */
 import { createInterface } from "node:readline";
 import { getDb, closeDb } from "../src/db.ts";
-import { adminUsers } from "../src/schema.ts";
-import { hashPassword } from "../src/auth.ts";
+import { inArray } from "drizzle-orm";
+import { adminUsers, authThrottle } from "../src/schema.ts";
+import { hashPassword, revokeAllAccess } from "../src/auth.ts";
 
 async function promptHidden(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
@@ -35,10 +38,16 @@ if (password.length < 12) {
 }
 
 const passwordHash = await hashPassword(password);
-await getDb()
+const [user] = await getDb()
   .insert(adminUsers)
   .values({ email: email.toLowerCase(), name: nameParts.join(" "), passwordHash })
-  .onConflictDoUpdate({ target: adminUsers.email, set: { passwordHash, name: nameParts.join(" ") } });
+  .onConflictDoUpdate({ target: adminUsers.email, set: { passwordHash, name: nameParts.join(" ") } })
+  .returning({ id: adminUsers.id });
 
-console.log(`✓ admin user ${email} saved`);
+await revokeAllAccess(user.id);
+await getDb()
+  .delete(authThrottle)
+  .where(inArray(authThrottle.key, [`pw:${email.toLowerCase()}`, `code:${user.id}`, `mail:${user.id}`]));
+
+console.log(`✓ admin user ${email} saved (logged out everywhere, lockouts lifted)`);
 await closeDb();

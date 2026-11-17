@@ -31,6 +31,14 @@ x-ai-env: &ai-env
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
 
+# outgoing mail (admin only): login codes and lockout warnings. Same setup as TransferNews (SMTP).
+x-mail-env: &mail-env
+  EMAIL_HOST: ${EMAIL_HOST:-}
+  EMAIL_PORT: ${EMAIL_PORT:-587}
+  EMAIL_USER: ${EMAIL_USER:-}
+  EMAIL_PASS: ${EMAIL_PASS:-}
+  EMAIL_FROM: ${EMAIL_FROM:-}
+
 # zero-downtime rolling updates: start the new container before stopping the old one
 x-rolling: &rolling
   update_config:
@@ -59,9 +67,9 @@ services:
 
   fgb-admin:
     image: feelgoodbrothers-admin:${TAG:-latest}
-    # only the admin gets the AI keys
+    # only the admin gets the AI keys and the mail login
     environment:
-      <<: [*app-env, *ai-env]
+      <<: [*app-env, *ai-env, *mail-env]
     volumes:
       - /opt/feelgoodbrothers/uploads:/data/uploads
     networks: [fgb, shared]

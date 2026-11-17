@@ -43,6 +43,13 @@
       "when": 1794501222450,
       "tag": "0005_hero_illustrative",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794905069017,
+      "tag": "0006_admin_2fa",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,155 @@
+---
+// Second login step: the 6-digit code that was mailed after a correct password.
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { SESSION_COOKIE, SESSION_DAYS, createSession, validateSession } from "@fgb/core/auth";
+import {
+  CHALLENGE_COOKIE,
+  MAX_CODE_ATTEMPTS,
+  TRUSTED_COOKIE,
+  TRUSTED_DAYS,
+  createTrustedDevice,
+  getChallengeInfo,
+  resendCode,
+  untilText,
+  verifyChallengeCode,
+} from "@fgb/core/twofactor";
+
+const nextParam = Astro.url.searchParams.get("next") ?? "/";
+const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
+const backToLogin = `/login${next === "/" ? "" : `?next=${encodeURIComponent(next)}`}`;
+
+if (await validateSession(Astro.cookies.get(SESSION_COOKIE)?.value)) {
+  return Astro.redirect(next);
+}
+
+const challengeToken = Astro.cookies.get(CHALLENGE_COOKIE)?.value;
+let error = "";
+let notice = "";
+let remember = true;
+
+if (Astro.request.method === "POST") {
+  const ip = Astro.request.headers.get("x-real-ip") ?? Astro.clientAddress;
+  const form = await Astro.request.formData();
+  remember = form.get("remember") === "on";
+
+  if (form.get("action") === "resend") {
+    const r = await resendCode(challengeToken);
+    if (r.ok) notice = "Er is een nieuwe code verstuurd.";
+    else if (r.reason === "no_challenge") return Astro.redirect(backToLogin);
+    else if (r.reason === "cooldown") error = `Wacht nog ${r.seconds} seconden voordat je een nieuwe code vraagt.`;
+    else if (r.reason === "locked") error = `Te veel foute codes. Probeer het ${untilText(r.until)} opnieuw.`;
+    else if (r.reason === "mail_limit") error = "Er zijn te veel codes verstuurd. Probeer het over een uur opnieuw.";
+    else error = "De code kon niet worden verstuurd. Probeer het later opnieuw.";
+  } else {
+    const r = await verifyChallengeCode(challengeToken, String(form.get("code") ?? ""), ip);
+    if (r.ok) {
+      Astro.cookies.delete(CHALLENGE_COOKIE, { path: "/login" });
+      const { token, expiresAt } = await createSession(r.user.id);
+      Astro.cookies.set(SESSION_COOKIE, token, {
+        httpOnly: true,
+        secure: import.meta.env.PROD,
+        sameSite: "lax",
+        path: "/",
+        expires: expiresAt,
+        maxAge: SESSION_DAYS * 24 * 60 * 60,
+      });
+      if (remember) {
+        const device = await createTrustedDevice(r.user.id, Astro.request.headers.get("user-agent") ?? "");
+        Astro.cookies.set(TRUSTED_COOKIE, device.token, {
+          httpOnly: true,
+          secure: import.meta.env.PROD,
+          sameSite: "lax",
+          path: "/login",
+          expires: device.expiresAt,
+          maxAge: TRUSTED_DAYS * 24 * 60 * 60,
+        });
+      }
+      return Astro.redirect(next);
+    }
+    if (r.reason === "no_challenge") return Astro.redirect(backToLogin);
+    if (r.reason === "locked") {
+      Astro.cookies.delete(CHALLENGE_COOKIE, { path: "/login" });
+      error = `Te veel foute codes. Je account is geblokkeerd; probeer het ${untilText(r.until)} opnieuw. Je hebt een waarschuwingsmail gekregen.`;
+    } else if (r.reason === "code_inactive") {
+      error = "Deze code is verlopen of niet meer geldig. Vraag een nieuwe code.";
+    } else {
+      error =
+        r.attemptsLeft > 0
+          ? `Deze code klopt niet. Nog ${r.attemptsLeft} ${r.attemptsLeft === 1 ? "poging" : "pogingen"} met deze code.`
+          : `Deze code klopt ${MAX_CODE_ATTEMPTS} keer niet en is nu ongeldig. Vraag een nieuwe code.`;
+    }
+  }
+}
+
+const info = await getChallengeInfo(challengeToken);
+if (!info && !error) return Astro.redirect(backToLogin);
+---
+
+<AdminLayout title="Inlogcode">
+  <div class="mx-auto mt-16 max-w-sm">
+    <h1 class="mb-6 text-center text-2xl font-semibold">
+      <span class="text-brand-600">Feelgood Brothers</span> admin
+    </h1>
+    <div class="card space-y-4">
+      {error && <p class="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {notice && <p class="rounded-md bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
+      {
+        info ? (
+          <>
+            <p class="text-sm text-gray-600">
+              We hebben een code van 6 cijfers gemaild naar <strong>{info.email}</strong>. De code is 10 minuten geldig.
+            </p>
+            <form method="post" class="space-y-4">
+              <div>
+                <label class="label" for="code">Inlogcode</label>
+                <input
+                  class="input text-center text-2xl tracking-[0.4em]"
+                  id="code"
+                  name="code"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  pattern="[0-9 ]{6,7}"
+                  maxlength="7"
+                  required
+                  autofocus
+                />
+              </div>
+              <label class="flex items-start gap-2 text-sm">
+                <input type="checkbox" name="remember" checked={remember} class="mt-0.5 rounded border-gray-300" />
+                <span>
+                  Dit apparaat {TRUSTED_DAYS} dagen onthouden
+                  <span class="block text-xs text-gray-500">Daarna vraagt hij hier alleen je wachtwoord. Niet aanvinken op een gedeelde computer.</span>
+                </span>
+              </label>
+              <button class="btn-primary w-full" type="submit" name="action" value="verify">Inloggen</button>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-500">Geen mail? Kijk ook in je spam.</span>
+                <button class="text-brand-700 underline disabled:text-gray-400 disabled:no-underline" type="submit" name="action" value="resend" formnovalidate data-resend-in={info.resendInSeconds}>
+                  Nieuwe code sturen
+                </button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <a class="btn-primary block w-full text-center" href={backToLogin}>Opnieuw inloggen</a>
+        )
+      }
+      <p class="text-center text-xs"><a class="text-gray-500 underline" href={backToLogin}>Terug naar inloggen</a></p>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // disable "send again" until the cooldown is over (the server checks it too)
+  const btn = document.querySelector<HTMLButtonElement>("[data-resend-in]");
+  if (btn) {
+    let left = Number(btn.dataset.resendIn ?? 0);
+    const label = btn.textContent?.trim() ?? "";
+    const tick = () => {
+      btn.disabled = left > 0;
+      btn.textContent = left > 0 ? `${label} (${left}s)` : label;
+      if (left-- > 0) setTimeout(tick, 1000);
+    };
+    tick();
+  }
+</script>

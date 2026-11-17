@@ -234,6 +234,56 @@ export const sessions = pgTable("sessions", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });
 
+/**
+ * Second login step: after a correct password, a 6-digit code is mailed. The browser holds a
+ * random token (cookie) that points to this row; only hashes are stored.
+ */
+export const loginChallenges = pgTable("login_challenges", {
+  id: serial("id").primaryKey(),
+  /** sha256 of the challenge token in the cookie */
+  tokenHash: text("token_hash").notNull().unique(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => adminUsers.id, { onDelete: "cascade" }),
+  /** sha256 of challenge id + code; null when the code was used up by wrong attempts */
+  codeHash: text("code_hash"),
+  codeExpiresAt: timestamp("code_expires_at", { withTimezone: true }).notNull(),
+  /** wrong attempts on the current code */
+  attempts: integer("attempts").notNull().default(0),
+  lastSentAt: timestamp("last_sent_at", { withTimezone: true }).notNull().defaultNow(),
+  /** the whole challenge (incl. resends) ends here */
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  ip: text("ip").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** "remember this device for 30 days": skips the mail code (never the password) */
+export const trustedDevices = pgTable("trusted_devices", {
+  /** sha256 of the token in the cookie */
+  id: text("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => adminUsers.id, { onDelete: "cascade" }),
+  userAgent: text("user_agent").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
+/**
+ * Failed-attempt counters and lockouts, e.g. "pw:<email>", "pw-ip:<ip>", "code:<userId>",
+ * "mail:<userId>". In the database so a deploy/restart doesn't reset them.
+ */
+export const authThrottle = pgTable("auth_throttle", {
+  key: text("key").primaryKey(),
+  failures: integer("failures").notNull().default(0),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  /** how many times this key got locked recently (escalates 15 min -> 1 h) */
+  lockLevel: integer("lock_level").notNull().default(0),
+  lastLockAt: timestamp("last_lock_at", { withTimezone: true }),
+});
+
 // ---------------------------------------------------------------------------
 // relations
 // ---------------------------------------------------------------------------
