@@ -1,10 +1,10 @@
 /**
- * Starter list of recognisable situations per category. Inserted once (when the
- * table is empty); editable in the admin afterwards.
+ * Starter list of recognisable situations per category. Inserted once per database
+ * (seed marker "situations"); editable in the admin afterwards, and deleting them is permanent.
  */
 import { count } from "drizzle-orm";
-import { getDb } from "../db.ts";
 import { categories, situations } from "../schema.ts";
+import { seedOnce } from "../seed.ts";
 
 type Seed = [en: string, nl: string];
 
@@ -73,14 +73,26 @@ const SEED: Record<string, Seed[]> = {
 };
 
 export async function seedSituations(): Promise<number> {
-  const db = getDb();
-  const [{ n }] = await db.select({ n: count() }).from(situations);
-  if (n > 0) return 0;
-  const cats = await db.select().from(categories);
-  const rows = Object.entries(SEED).flatMap(([slugEn, list]) => {
-    const cat = cats.find((c) => c.slugEn === slugEn);
-    return cat ? list.map(([labelEn, labelNl], i) => ({ categoryId: cat.id, labelEn, labelNl, sortOrder: i })) : [];
-  });
-  if (rows.length) await db.insert(situations).values(rows);
-  return rows.length;
+  // categories come from the blog import: without them there is nothing to attach to yet,
+  // so don't set the marker (seed again on the next run)
+  const run = async (tx: Parameters<Parameters<typeof seedOnce>[1]>[0]) => {
+    const [{ n }] = await tx.select({ n: count() }).from(situations);
+    if (n > 0) return 0;
+    const cats = await tx.select().from(categories);
+    const rows = Object.entries(SEED).flatMap(([slugEn, list]) => {
+      const cat = cats.find((c) => c.slugEn === slugEn);
+      return cat ? list.map(([labelEn, labelNl], i) => ({ categoryId: cat.id, labelEn, labelNl, sortOrder: i })) : [];
+    });
+    if (rows.length === 0) throw new NoCategoriesYet();
+    await tx.insert(situations).values(rows);
+    return rows.length;
+  };
+  try {
+    return await seedOnce("situations", run);
+  } catch (err) {
+    if (err instanceof NoCategoriesYet) return 0; // transaction rolled back, marker not set
+    throw err;
+  }
 }
+
+class NoCategoriesYet extends Error {}

@@ -1,11 +1,11 @@
 /**
- * Starter writing styles for the assistant. Inserted once (when the table is
- * empty); editable in the admin afterwards. Instructions are English because
+ * Starter writing styles for the assistant. Inserted once per database (seed marker
+ * "writing_styles"); editable in the admin afterwards, and deleting them is permanent. Instructions are English because
  * they go straight into the system prompt; the AI still writes in the draft language.
  */
 import { count } from "drizzle-orm";
-import { getDb } from "../db.ts";
 import { writingStyles } from "../schema.ts";
+import { seedOnce } from "../seed.ts";
 
 export const DEFAULT_STYLE_KEY = "mick";
 
@@ -134,10 +134,11 @@ export const STYLE_SEEDS: StyleSeed[] = [
 ];
 
 export async function seedWritingStyles(): Promise<number> {
-  const db = getDb();
-  const [{ n }] = await db.select({ n: count() }).from(writingStyles);
-  if (n > 0) return 0;
-  const rows = STYLE_SEEDS.map((s, i) => ({ ...s, sortOrder: i }));
-  await db.insert(writingStyles).values(rows);
-  return rows.length;
+  return seedOnce("writing_styles", async (tx) => {
+    const [{ n }] = await tx.select({ n: count() }).from(writingStyles);
+    if (n > 0) return 0;
+    const rows = STYLE_SEEDS.map((s, i) => ({ ...s, sortOrder: i }));
+    await tx.insert(writingStyles).values(rows);
+    return rows.length;
+  });
 }

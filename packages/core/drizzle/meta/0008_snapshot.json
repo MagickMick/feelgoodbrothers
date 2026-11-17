@@ -1,5 +1,5 @@
 {
-  "id": "649f93eb-7e33-4edd-9851-e400548993d0",
+  "id": "adb7f108-08ef-41b0-92e8-0a22157fed51",
   "prevId": "66e0ccd9-71c2-4bfc-b22c-2925485f4fa8",
   "version": "7",
   "dialect": "postgresql",
@@ -912,42 +912,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "audio_key": {
-          "name": "audio_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "audio_duration_sec": {
-          "name": "audio_duration_sec",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "audio_voice": {
-          "name": "audio_voice",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "audio_text_hash": {
-          "name": "audio_text_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "audio_created_at": {
-          "name": "audio_created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "audio_busy_since": {
-          "name": "audio_busy_since",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -1100,6 +1064,32 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.seed_markers": {
+      "name": "seed_markers",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "seeded_at": {
+          "name": "seeded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
