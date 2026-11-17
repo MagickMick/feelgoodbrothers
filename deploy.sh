@@ -96,6 +96,9 @@ load_env .env.production
 for v in POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD SITE_URL; do
   [ -n "${!v:-}" ] || die "$v is empty in .env.production"
 done
+for v in EMAIL_HOST EMAIL_USER EMAIL_PASS; do
+  [ -n "${!v:-}" ] || die "$v is empty in .env.production: the admin login mails a code, without mail nobody can log in"
+done
 [ "${AI_PROVIDER:-openai}" = "openai" ] && [ -z "${OPENAI_API_KEY:-}" ] && warn "OPENAI_API_KEY is empty: the writing assistant will say it has no key"
 ok ".env.production complete"
 
@@ -233,7 +236,10 @@ else
   acme_file "mkdir -p /w/.well-known/acme-challenge && echo $PROBE > /w/.well-known/acme-challenge/$PROBE"
   NOT_READY=()
   for d in "${DOMAINS[@]}"; do
-    got=$(curl -sLk --max-time 8 "http://$d/.well-known/acme-challenge/$PROBE" || true)
+    # resolve via public DNS (what Let's Encrypt sees), not this Mac's cache
+    pub_ip=$(dig +short A "$d" @1.1.1.1 2>/dev/null | grep -E '^[0-9.]+$' | tail -1 || true)
+    got=$(curl -sLk --max-time 8 ${pub_ip:+--resolve "$d:80:$pub_ip" --resolve "$d:443:$pub_ip"} \
+      "http://$d/.well-known/acme-challenge/$PROBE" || true)
     [ "$got" = "$PROBE" ] && ok "$d reaches this server" || NOT_READY+=("$d")
   done
   acme_file "rm -f /w/.well-known/acme-challenge/$PROBE"
@@ -304,7 +310,8 @@ for d in "${DOMAINS[@]}"; do
   case "$d" in admin.*) path=/health ;; esac
   code=000
   for _ in $(seq 1 15); do
-    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "https://$d$path" || true)
+    pub_ip=$(dig +short A "$d" @1.1.1.1 2>/dev/null | grep -E '^[0-9.]+$' | tail -1 || true)
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 ${pub_ip:+--resolve "$d:443:$pub_ip"} "https://$d$path" || true)
     [ "$code" = 200 ] && break
     sleep 2
   done

@@ -1,15 +1,14 @@
 ---
 import AdminLayout from "@/layouts/AdminLayout.astro";
+import { SESSION_COOKIE, SESSION_DAYS, createSession, validateSession } from "@fgb/core/auth";
 import {
-  SESSION_COOKIE,
-  SESSION_DAYS,
-  clearAttempts,
-  createSession,
-  isRateLimited,
-  registerFailedAttempt,
-  validateSession,
-  verifyLogin,
-} from "@fgb/core/auth";
+  CHALLENGE_COOKIE,
+  TRUSTED_COOKIE,
+  attemptPassword,
+  isTrustedDevice,
+  startChallenge,
+  untilText,
+} from "@fgb/core/twofactor";
 
 const nextParam = Astro.url.searchParams.get("next") ?? "/";
 // only allow relative redirects back into the admin
@@ -28,28 +27,43 @@ if (Astro.request.method === "POST") {
   const form = await Astro.request.formData();
   email = String(form.get("email") ?? "").trim();
   const password = String(form.get("password") ?? "");
-  const key = `${ip}:${email.toLowerCase()}`;
 
-  if (isRateLimited(key) || isRateLimited(ip)) {
-    error = "Te veel pogingen. Probeer het over 15 minuten opnieuw.";
+  const result = await attemptPassword(email, password, ip);
+  if (!result.ok) {
+    error =
+      result.reason === "locked"
+        ? `Te veel pogingen. Probeer het ${untilText(result.until)} opnieuw.`
+        : "E-mail of wachtwoord klopt niet.";
+  } else if (await isTrustedDevice(Astro.cookies.get(TRUSTED_COOKIE)?.value, result.user.id)) {
+    // remembered device: password is enough
+    const { token, expiresAt } = await createSession(result.user.id);
+    Astro.cookies.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: import.meta.env.PROD,
+      sameSite: "lax",
+      path: "/",
+      expires: expiresAt,
+      maxAge: SESSION_DAYS * 24 * 60 * 60,
+    });
+    return Astro.redirect(next);
   } else {
-    const user = await verifyLogin(email, password);
-    if (user) {
-      clearAttempts(key);
-      const { token, expiresAt } = await createSession(user.id);
-      Astro.cookies.set(SESSION_COOKIE, token, {
+    const challenge = await startChallenge(result.user, ip);
+    if (challenge.ok) {
+      Astro.cookies.set(CHALLENGE_COOKIE, challenge.token, {
         httpOnly: true,
         secure: import.meta.env.PROD,
         sameSite: "lax",
-        path: "/",
-        expires: expiresAt,
-        maxAge: SESSION_DAYS * 24 * 60 * 60,
+        path: "/login",
+        expires: challenge.expiresAt,
       });
-      return Astro.redirect(next);
+      return Astro.redirect(`/login/code${next === "/" ? "" : `?next=${encodeURIComponent(next)}`}`);
     }
-    registerFailedAttempt(key);
-    registerFailedAttempt(ip);
-    error = "E-mail of wachtwoord klopt niet.";
+    error =
+      challenge.reason === "locked"
+        ? `Te veel foute codes. Probeer het ${untilText(challenge.until)} opnieuw.`
+        : challenge.reason === "mail_limit"
+          ? "Er zijn te veel codes verstuurd. Probeer het over een uur opnieuw."
+          : "De inlogcode kon niet worden verstuurd. Probeer het later opnieuw.";
   }
 }
 ---

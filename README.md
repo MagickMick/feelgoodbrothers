@@ -19,6 +19,12 @@ docker-stack.yml production stack (web, admin, postgres, daily backup)
 - **Images** are uploaded in the admin. They are converted once to WebP (480–2000px) plus a 1200×630 OG image, stored in `/opt/feelgoodbrothers/uploads` and served at `/media/…` with a one-year cache (nginx caches them too).
 - **Guest stories** are posts with `kind = 'guest'`. The only public detail is `guest_name`, a first name or pseudonym. Email, consent date and note are internal and stripped from every public query. Guest stories have no author profile. They are listed between all other blogs and under their categories, with no separate section, and carry a "Guest story" / "Gastblog" badge plus "by <name>". Authors are only the Feelgood Brothers team.
 - **Writing assistant** (admin → ✨ Schrijfhulp): pick a category and a recognisable situation (list per category, editable under Situaties, or "random" which picks the least used one). The AI streams a first-person **draft** in the style of the team's own posts, which are sent along as voice samples. You can revise it by chatting, then save it as a post draft. Drafts may contain `[[…]]` placeholders where a real personal detail belongs; publishing is blocked until they are gone,. Providers are OpenAI and Claude behind one layer (`packages/core/src/ai/`), with "mock" for testing without a key. The editor can also create the other-language version with "Vertaal met AI". Token usage is stored per session in `ai_sessions`.
+- **Admin login** has two steps: password, then a 6-digit code by mail (SMTP, `EMAIL_*` in `.env.production`, same setup as TransferNews). "Remember this device" skips the code (never the password) for 30 days. Lockouts are stored in Postgres, so a deploy doesn't reset them:
+  - password: 5 wrong per account in 15 min locks it for 15 min; the next lock within 24 h lasts 1 h; 20 wrong per IP locks that IP for 1 h
+  - code: 10 min valid, single use, void after 3 wrong; 10 wrong per hour locks the account for 1 h
+  - mail: max 5 codes per hour, 1 minute between resends
+  - every lock mails a warning to the admin
+  - `create-admin` (setting a password) lifts lockouts and logs out everywhere. Locally, codes appear in `docker compose logs admin`.
 - **Changing a slug** of a live post, category or author creates a 301 redirect automatically.
 - **Comments** stay on Disqus (`feelgood-brothers.disqus.com`). The embed loads only when the reader scrolls to the comments.
 - **SEO** covers canonical URLs, hreflang + x-default, Open Graph/X cards, JSON-LD (BlogPosting, BreadcrumbList, Organization, WebSite, ProfilePage), dynamic `sitemap.xml` (per-language sitemaps with alternates), `robots.txt`, RSS per language, author and category landing pages, related posts, and optional IndexNow pings and Cloudflare cache purge on publish.
@@ -75,7 +81,7 @@ The site runs on the **Weggeefdeals VPS** (docker context `weggeefdeals`) as its
 
 ```bash
 cp deploy.env.example deploy.env          # DOMAINS starts with new + admin
-cp .env.example .env.production           # POSTGRES_PASSWORD (openssl rand -hex 24), OPENAI_API_KEY, INDEXNOW_KEY
+cp .env.example .env.production           # POSTGRES_PASSWORD (openssl rand -hex 24), OPENAI_API_KEY, INDEXNOW_KEY, EMAIL_* (login codes)
 ```
 
 1. **Cloudflare DNS:** add the A records `new` and `admin` → `187.124.189.127`, as **DNS only** (grey cloud).
@@ -101,7 +107,7 @@ After that, every update is just `./deploy.sh`. It does a rolling update with no
 3. **Request the bigger certificate.** In `deploy.env`, set `DOMAINS="feelgoodbrothers.com www.feelgoodbrothers.com new.feelgoodbrothers.com admin.feelgoodbrothers.com"` and run `./deploy.sh --skip-build`. nginx already knows these hostnames, and the new certificate is loaded with a reload.
 4. **Turn on the Cloudflare proxy** (orange cloud) for `@`, `www` and `new`, with SSL mode **Full (strict)**. nginx serves `/.well-known/acme-challenge/` over HTTPS too, so renewals keep working behind the proxy.
 5. **After a few quiet days:**
-   - Shut down the old server.
+   - Keep the old hosting (67.209.118.202): the **mail** for feelgoodbrothers.com runs there (`mail`, `webmail`, `autodiscover`, MX). Those records stay "DNS only" and keep pointing to it. Only cancel it after moving the mail elsewhere.
    - Add the site in Google Search Console and Bing Webmaster Tools and submit `https://feelgoodbrothers.com/sitemap.xml`.
    - Point `new` to the apex, or remove it.
 

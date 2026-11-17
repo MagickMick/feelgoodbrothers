@@ -1,7 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
 import { SESSION_COOKIE, validateSession } from "@fgb/core/auth";
 
-const PUBLIC_PATHS = ["/login", "/health"];
+const PUBLIC_PATHS = ["/login", "/login/code", "/health"];
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url, cookies, locals } = context;

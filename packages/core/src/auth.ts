@@ -1,8 +1,8 @@
 import { hash, verify } from "@node-rs/argon2";
 import { createHash, randomBytes } from "node:crypto";
-import { eq, lt } from "drizzle-orm";
+import { and, eq, isNull, lt, or } from "drizzle-orm";
 import { getDb } from "./db.ts";
-import { adminUsers, sessions, type AdminUser } from "./schema.ts";
+import { adminUsers, authThrottle, loginChallenges, sessions, trustedDevices, type AdminUser } from "./schema.ts";
 
 export const SESSION_COOKIE = "fgb_session";
 export const SESSION_DAYS = 30;
@@ -11,7 +11,7 @@ export function hashPassword(password: string): Promise<string> {
   return hash(password, { memoryCost: 19456, timeCost: 2, parallelism: 1 });
 }
 
-function sha256(token: string): string {
+export function sha256(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
@@ -35,8 +35,8 @@ export async function createSession(userId: number): Promise<{ token: string; ex
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   const db = getDb();
   await db.insert(sessions).values({ id: sha256(token), userId, expiresAt });
-  // opportunistic cleanup of expired sessions
-  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
+  // opportunistic cleanup of expired sessions, devices, login codes and old counters
+  await cleanupExpiredAuth();
   return { token, expiresAt };
 }
 
@@ -55,32 +55,30 @@ export async function deleteSession(token: string | undefined): Promise<void> {
   await getDb().delete(sessions).where(eq(sessions.id, sha256(token)));
 }
 
-// ---------------------------------------------------------------------------
-// simple in-memory login rate limiter (single admin container)
-// ---------------------------------------------------------------------------
-const attempts = new Map<string, { count: number; first: number }>();
-const WINDOW_MS = 15 * 60 * 1000;
-const MAX_ATTEMPTS = 8;
-
-export function isRateLimited(key: string): boolean {
-  const entry = attempts.get(key);
-  if (!entry) return false;
-  if (Date.now() - entry.first > WINDOW_MS) {
-    attempts.delete(key);
-    return false;
-  }
-  return entry.count >= MAX_ATTEMPTS;
+/** logs a user out everywhere: all sessions, trusted devices and pending login codes (e.g. after a password reset) */
+export async function revokeAllAccess(userId: number): Promise<void> {
+  const db = getDb();
+  await db.delete(sessions).where(eq(sessions.userId, userId));
+  await db.delete(trustedDevices).where(eq(trustedDevices.userId, userId));
+  await db.delete(loginChallenges).where(eq(loginChallenges.userId, userId));
 }
 
-export function registerFailedAttempt(key: string): void {
-  const entry = attempts.get(key);
-  if (!entry || Date.now() - entry.first > WINDOW_MS) {
-    attempts.set(key, { count: 1, first: Date.now() });
-  } else {
-    entry.count++;
-  }
-}
-
-export function clearAttempts(key: string): void {
-  attempts.delete(key);
+/** removes expired sessions, devices and login codes */
+export async function cleanupExpiredAuth(): Promise<void> {
+  const db = getDb();
+  const now = new Date();
+  await db.delete(sessions).where(lt(sessions.expiresAt, now));
+  await db.delete(trustedDevices).where(lt(trustedDevices.expiresAt, now));
+  await db.delete(loginChallenges).where(lt(loginChallenges.expiresAt, now));
+  // counters with no activity for a day and no running lock (keeps the 24 h lock escalation)
+  const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  await db
+    .delete(authThrottle)
+    .where(
+      and(
+        lt(authThrottle.windowStart, dayAgo),
+        or(isNull(authThrottle.lockedUntil), lt(authThrottle.lockedUntil, now)),
+        or(isNull(authThrottle.lastLockAt), lt(authThrottle.lastLockAt, dayAgo)),
+      ),
+    );
 }

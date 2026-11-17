@@ -40,6 +40,13 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+      # login codes: without EMAIL_HOST they are printed in the admin log (docker compose logs admin)
+      EMAIL_DEV_LOG: "1"
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASS: ${EMAIL_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
     ports:
       - "4322:4322"
     volumes:

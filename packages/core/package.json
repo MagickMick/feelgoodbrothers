@@ -18,7 +18,9 @@
     "./time": "./src/time.ts",
     "./ai": "./src/ai/service.ts",
     "./ai/prompts": "./src/ai/prompts.ts",
-    "./ai/provider": "./src/ai/provider.ts"
+    "./ai/provider": "./src/ai/provider.ts",
+    "./twofactor": "./src/twofactor.ts",
+    "./mail": "./src/mail.ts"
   },
   "scripts": {
     "db:generate": "drizzle-kit generate",
@@ -33,6 +35,7 @@
     "drizzle-orm": "^0.45.4",
     "gray-matter": "^4.0.3",
     "marked": "^18.2.0",
+    "nodemailer": "^10.6.0",
     "openai": "^7.55.0",
     "postgres": "^3.4.9",
     "sanitize-html": "^2.17.0",
@@ -40,6 +43,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.18.0",
+    "@types/nodemailer": "^8.0.2",
     "@types/sanitize-html": "^2.16.0",
     "drizzle-kit": "^0.31.11",
     "tsx": "^4.20.6",
