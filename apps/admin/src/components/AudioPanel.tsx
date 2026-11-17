@@ -47,7 +47,7 @@ export default function AudioPanel({ postId, audio, dirty, placeholdersOpen }: P
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error ?? "Er ging iets mis");
-      window.onbeforeunload = null;
+      setBusy("");
       window.location.href = `/posts/${postId}/?audio=${action === "delete" ? "deleted" : "made"}`;
     } catch (err) {
       setError((err as Error).message);
