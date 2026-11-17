@@ -12,7 +12,9 @@
  * All file access goes through this module, so switching to S3/R2 later only
  * means changing this file.
  */
+import { createReadStream } from "node:fs";
 import { mkdir, readFile, stat, unlink } from "node:fs/promises";
+import { Readable } from "node:stream";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 import sharp from "sharp";
@@ -154,27 +156,35 @@ export async function serveMediaFile(fileName: string, rangeHeader?: string | nu
   if (ext === ".mp3" && !safe.startsWith("audio-")) return new Response("Not found", { status: 404 });
   const full = path.join(uploadsDir(), safe);
   try {
-    await stat(full);
-    const data = await readFile(full);
+    const info = await stat(full);
+    if (!info.isFile()) return new Response("Not found", { status: 404 });
+    const size = info.size;
     const headers: Record<string, string> = {
       "Content-Type": type,
       "Cache-Control": "public, max-age=31536000, immutable",
     };
-    if (ext === ".mp3") {
-      headers["Accept-Ranges"] = "bytes";
-      if (rangeHeader) {
-        const range = parseRange(rangeHeader, data.length);
-        if (!range) {
-          return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${data.length}` } });
-        }
-        const [start, end] = range;
-        return new Response(new Uint8Array(data.subarray(start, end + 1)), {
-          status: 206,
-          headers: { ...headers, "Content-Range": `bytes ${start}-${end}/${data.length}` },
-        });
-      }
+    if (ext !== ".mp3") {
+      // images are small (a few hundred KB at most)
+      return new Response(new Uint8Array(await readFile(full)), { headers });
     }
-    return new Response(new Uint8Array(data), { headers });
+    // audio can be many MB: stream it, and for a Range request read only that byte interval
+    headers["Accept-Ranges"] = "bytes";
+    let start = 0;
+    let end = size - 1;
+    let status = 200;
+    if (rangeHeader) {
+      const range = parseRange(rangeHeader, size);
+      if (!range) {
+        return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${size}` } });
+      }
+      [start, end] = range;
+      status = 206;
+      headers["Content-Range"] = `bytes ${start}-${end}/${size}`;
+    }
+    headers["Content-Length"] = String(end - start + 1);
+    if (size === 0) return new Response(new Uint8Array(0), { status, headers });
+    const body = Readable.toWeb(createReadStream(full, { start, end })) as unknown as ReadableStream<Uint8Array>;
+    return new Response(body, { status, headers });
   } catch {
     return new Response("Not found", { status: 404 });
   }
