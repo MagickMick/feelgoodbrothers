@@ -122,13 +122,12 @@ if (!info && !error) return Astro.redirect(backToLogin);
                 </span>
               </label>
               <button class="btn-primary w-full" type="submit" name="action" value="verify">Inloggen</button>
-            </form>
-            <form method="post" class="flex items-center justify-between text-sm">
-              <input type="hidden" name="remember" value={remember ? "on" : ""} />
-              <span class="text-gray-500">Geen mail? Kijk ook in je spam.</span>
-              <button class="text-brand-700 underline disabled:text-gray-400 disabled:no-underline" type="submit" name="action" value="resend" data-resend-in={info.resendInSeconds}>
-                Nieuwe code sturen
-              </button>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-500">Geen mail? Kijk ook in je spam.</span>
+                <button class="text-brand-700 underline disabled:text-gray-400 disabled:no-underline" type="submit" name="action" value="resend" formnovalidate data-resend-in={info.resendInSeconds}>
+                  Nieuwe code sturen
+                </button>
+              </div>
             </form>
           </>
         ) : (
