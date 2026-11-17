@@ -21,6 +21,7 @@ import { deleteImageFiles, processImage } from "./storage.ts";
 import { countPlaceholders } from "./ai/prompts.ts";
 import { notifyContentChanged } from "./notify.ts";
 import { deleteAudioFile } from "./ai/speech.ts";
+import { deleteShortFilesForPost } from "./shorts/service.ts";
 
 export class ValidationError extends Error {
   constructor(public fields: Record<string, string>) {
@@ -223,6 +224,7 @@ export async function deletePost(id: number): Promise<void> {
   const db = getDb();
   const [old] = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
   if (!old) return;
+  await deleteShortFilesForPost(id); // rows go with the post (cascade), files not
   await db.delete(posts).where(eq(posts.id, id));
   await deleteAudioFile(old.audioKey);
   if (isLive(old.status, old.publishAt)) void notifyContentChanged(affectedPaths(old.locale, old.slug));

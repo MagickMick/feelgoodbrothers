@@ -21,6 +21,8 @@
     "./ai/provider": "./src/ai/provider.ts",
     "./ai/styles": "./src/ai/styles-seed.ts",
     "./ai/speech": "./src/ai/speech.ts",
+    "./shorts": "./src/shorts/service.ts",
+    "./shorts/types": "./src/shorts/types.ts",
     "./twofactor": "./src/twofactor.ts",
     "./mail": "./src/mail.ts"
   },

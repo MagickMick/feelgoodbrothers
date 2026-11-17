@@ -33,6 +33,7 @@ x-ai-env: &ai-env
   OPENAI_TTS_MODEL: ${OPENAI_TTS_MODEL:-}
   OPENAI_TTS_VOICE_EN: ${OPENAI_TTS_VOICE_EN:-}
   OPENAI_TTS_VOICE_NL: ${OPENAI_TTS_VOICE_NL:-}
+  OPENAI_IMAGE_MODEL: ${OPENAI_IMAGE_MODEL:-}
 
 # outgoing mail (admin only): login codes and lockout warnings. Same setup as TransferNews (SMTP).
 x-mail-env: &mail-env

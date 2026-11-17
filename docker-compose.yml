@@ -43,6 +43,7 @@ services:
       OPENAI_TTS_MODEL: ${OPENAI_TTS_MODEL:-}
       OPENAI_TTS_VOICE_EN: ${OPENAI_TTS_VOICE_EN:-}
       OPENAI_TTS_VOICE_NL: ${OPENAI_TTS_VOICE_NL:-}
+      OPENAI_IMAGE_MODEL: ${OPENAI_IMAGE_MODEL:-}
       # login codes: without EMAIL_HOST they are printed in the admin log (docker compose logs admin)
       EMAIL_DEV_LOG: "1"
       EMAIL_HOST: ${EMAIL_HOST:-}

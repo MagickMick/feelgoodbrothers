@@ -208,7 +208,7 @@ export function silentMp3(seconds: number): Uint8Array {
   return out;
 }
 
-function concat(parts: Uint8Array[]): Uint8Array {
+export function concat(parts: Uint8Array[]): Uint8Array {
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let at = 0;
   for (const p of parts) {
@@ -221,7 +221,7 @@ function concat(parts: Uint8Array[]): Uint8Array {
 // ---------------------------------------------------------------------------
 // generation
 // ---------------------------------------------------------------------------
-async function ttsChunk(text: string, locale: Locale, model: string, voice: string): Promise<Uint8Array> {
+export async function ttsChunk(text: string, locale: Locale, model: string, voice: string): Promise<Uint8Array> {
   const { default: OpenAI } = await import("openai");
   const client = new OpenAI();
   try {
@@ -243,7 +243,7 @@ async function ttsChunk(text: string, locale: Locale, model: string, voice: stri
 }
 
 /** run `fn` over items with at most `limit` at the same time, keeping the order */
-async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+export async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const results = new Array<R>(items.length);
   let next = 0;
   await Promise.all(

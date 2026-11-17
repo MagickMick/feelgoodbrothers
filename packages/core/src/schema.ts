@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { ShortAssets, Storyboard } from "./shorts/types.ts";
 
 export const LOCALES = ["en", "nl"] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -227,6 +228,26 @@ export const aiSessions = pgTable("ai_sessions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** vertical animated video (YouTube Shorts / Reels) made from a post; rendered in the editor's browser */
+export const shorts = pgTable(
+  "shorts",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    locale: localeEnum("locale").notNull(),
+    storyboard: jsonb("storyboard").$type<Storyboard>().notNull(),
+    assets: jsonb("assets").$type<ShortAssets>().notNull(),
+    error: text("error"),
+    /** set while AI work runs for this short (one job at a time) */
+    busySince: timestamp("busy_since", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("shorts_post_idx").on(t.postId)],
+);
+
 /** one row per AI call (generate, revise, translate): the source for usage reporting */
 export const aiUsage = pgTable(
   "ai_usage",
@@ -234,7 +255,9 @@ export const aiUsage = pgTable(
     id: serial("id").primaryKey(),
     sessionId: integer("session_id").references(() => aiSessions.id, { onDelete: "set null" }),
     postId: integer("post_id").references(() => posts.id, { onDelete: "set null" }),
-    kind: text("kind").$type<"generate" | "revise" | "translate" | "speech">().notNull(),
+    kind: text("kind")
+      .$type<"generate" | "revise" | "translate" | "speech" | "short-script" | "short-image" | "short-voice" | "short-transcribe">()
+      .notNull(),
     provider: text("provider").notNull(),
     model: text("model").notNull(),
     inputTokens: integer("input_tokens").notNull().default(0),
@@ -359,5 +382,6 @@ export type Media = typeof media.$inferSelect;
 export type AdminUser = typeof adminUsers.$inferSelect;
 
 export type Situation = typeof situations.$inferSelect;
+export type Short = typeof shorts.$inferSelect;
 export type AiSession = typeof aiSessions.$inferSelect;
 export type WritingStyle = typeof writingStyles.$inferSelect;

@@ -14,6 +14,9 @@
     "@astrojs/node": "^11.1.12",
     "@astrojs/react": "^7.1.8",
     "@fgb/core": "*",
+    "@remotion/media": "4.0.540",
+    "@remotion/player": "4.0.540",
+    "@remotion/web-renderer": "4.0.540",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.20",
     "astro": "^7.4.11",
@@ -23,6 +26,7 @@
     "marked": "^18.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "remotion": "4.0.540",
     "tailwindcss": "^3.4.19"
   },
   "devDependencies": {

@@ -11,6 +11,8 @@ import { inputToEditorPost, parsePostForm, toEditorPost } from "@/lib/postForm";
 import { heroUrlFor, loadEditorOptions } from "@/lib/editorData";
 import { FLAGS, siteUrl, statusInfo, str } from "@/lib/ui";
 import { availableProviders, PROVIDER_LABELS } from "@fgb/core/ai/provider";
+import { listShortsForPost } from "@fgb/core/shorts";
+import { isShortReady } from "@fgb/core/shorts/types";
 import { audioUrl, estimateMinutes, speechConfig, speechText, speechTextHash } from "@fgb/core/ai/speech";
 
 const id = Number(Astro.params.id);
@@ -57,6 +59,11 @@ const audio = {
   estimateMinutes: estimateMinutes(speechText(existing)),
   mock: speechConfig(existing.locale).mock,
 };
+const shorts = (await listShortsForPost(id)).map((sh) => ({
+  id: sh.id,
+  label: `${sh.storyboard.hook || "Short"} (${formatDateTime(sh.createdAt)})`,
+  ready: isShortReady(sh.storyboard, sh.assets),
+}));
 ---
 
 <AdminLayout title={existing.title || "Blog bewerken"} wide>
@@ -116,6 +123,7 @@ const audio = {
     siteUrl={siteUrl()}
     hasTranslation={Boolean(translation)}
     audio={audio}
+    shorts={shorts}
   />
 
   <form
