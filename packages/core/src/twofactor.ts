@@ -160,7 +160,10 @@ export async function attemptPassword(email: string, password: string, ip: strin
 
   const user = await verifyLogin(email, password);
   if (user) {
-    await clear(emailKey);
+    await getDb()
+      .update(authThrottle)
+      .set({ failures: 0, windowStart: new Date() })
+      .where(eq(authThrottle.key, emailKey));
     return { ok: true, user };
   }
 
