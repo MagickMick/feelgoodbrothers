@@ -133,6 +133,15 @@ export const postCategories = pgTable(
   (t) => [primaryKey({ columns: [t.postId, t.categoryId] })],
 );
 
+/**
+ * Starter data that has been inserted once (situations, writing styles). With this marker a
+ * list the editor emptied on purpose stays empty instead of being re-seeded on every restart.
+ */
+export const seedMarkers = pgTable("seed_markers", {
+  key: text("key").primaryKey(),
+  seededAt: timestamp("seeded_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ---------------------------------------------------------------------------
 // AI writing assistant
 // ---------------------------------------------------------------------------
