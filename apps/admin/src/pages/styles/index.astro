@@ -1,0 +1,108 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { deleteWritingStyle, listWritingStyles, saveWritingStyle } from "@fgb/core/ai";
+import { DEFAULT_STYLE_KEY } from "@fgb/core/ai/styles";
+import { ValidationError } from "@fgb/core/admin";
+import { str } from "@/lib/ui";
+
+let error = "";
+let errorId: number | null = null;
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const id = Number(str(form, "id")) || null;
+  try {
+    if (str(form, "intent") === "delete" && id) await deleteWritingStyle(id);
+    else
+      await saveWritingStyle(id, {
+        name: str(form, "name"),
+        description: str(form, "description"),
+        instructions: str(form, "instructions"),
+        useVoiceSamples: form.get("useVoiceSamples") === "on",
+        active: form.get("active") === "on",
+        sortOrder: str(form, "sortOrder") === "" ? undefined : Number(str(form, "sortOrder")),
+      });
+    return Astro.redirect(id ? `/styles/#style-${id}` : "/styles/");
+  } catch (err) {
+    if (!(err instanceof ValidationError)) throw err;
+    error = err.message;
+    errorId = id;
+  }
+}
+
+const styles = await listWritingStyles();
+---
+
+<AdminLayout title="Schrijfstijlen">
+  <a href="/ai/" class="text-sm text-gray-500 hover:text-gray-800">← Schrijfhulp</a>
+  <h1 class="mb-2 mt-1 text-2xl font-semibold">Schrijfstijlen</h1>
+  <p class="mb-6 max-w-3xl text-sm text-gray-600">
+    De stijl bepaalt de stem en de vorm van een opzet. De vaste regels gelden altijd, wat je hier ook invult: ik-vorm, de opbouw van het verhaal en de veiligheidsregels.
+    De instructie gaat letterlijk naar de AI. Engels werkt het best, maar Nederlands mag ook; de opzet komt hoe dan ook in de taal die je in de schrijfhulp kiest.
+  </p>
+  {error && errorId === null && <p class="mb-4 rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+
+  <div class="space-y-4">
+    {styles.map((s) => (
+      <form method="post" id={`style-${s.id}`} class:list={["card space-y-3", !s.active && "opacity-60"]}>
+        <input type="hidden" name="id" value={s.id} />
+        {error && errorId === s.id && <p class="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        <div class="grid gap-3 md:grid-cols-[1fr_2fr_auto]">
+          <div>
+            <label class="label" for={`name-${s.id}`}>Naam</label>
+            <input class="input" id={`name-${s.id}`} name="name" value={s.name} required />
+          </div>
+          <div>
+            <label class="label" for={`desc-${s.id}`}>Uitleg (voor jou, in de keuzelijst)</label>
+            <input class="input" id={`desc-${s.id}`} name="description" value={s.description} />
+          </div>
+          <div>
+            <label class="label" for={`sort-${s.id}`}>Volgorde</label>
+            <input class="input w-20" id={`sort-${s.id}`} name="sortOrder" type="number" value={s.sortOrder} />
+          </div>
+        </div>
+        <details>
+          <summary class="cursor-pointer text-sm text-brand-700">Instructie voor de AI</summary>
+          <textarea class="input mt-2 font-mono text-xs" name="instructions" rows={8} required>{s.instructions}</textarea>
+        </details>
+        <div class="flex flex-wrap items-center gap-4 text-sm">
+          <label class="flex items-center gap-2"><input type="checkbox" name="active" checked={s.active} class="rounded border-gray-300" /> Actief</label>
+          <label class="flex items-center gap-2" title="Stuurt je 2 nieuwste eigen blogs mee als voorbeeld van toon">
+            <input type="checkbox" name="useVoiceSamples" checked={s.useVoiceSamples} class="rounded border-gray-300" /> Leer van mijn eigen blogs
+          </label>
+          {s.key === DEFAULT_STYLE_KEY && <span class="badge bg-brand-50 text-brand-700">standaard</span>}
+          <span class="flex-1"></span>
+          <button class="btn-secondary px-3 py-1 text-sm">Opslaan</button>
+          <button
+            class="px-1 text-xs text-red-600"
+            name="intent"
+            value="delete"
+            formnovalidate
+            onclick="return confirm('Schrijfstijl verwijderen? Oude opzetten in deze stijl gaan dan verder in de standaardstijl.')"
+          >
+            Verwijderen
+          </button>
+        </div>
+      </form>
+    ))}
+  </div>
+
+  <form method="post" class="card mt-8 space-y-3 border-dashed">
+    <h2 class="font-semibold">+ Nieuwe schrijfstijl</h2>
+    <div class="grid gap-3 md:grid-cols-[1fr_2fr]">
+      <input class="input" name="name" placeholder="Naam, bv. Tiener" required />
+      <input class="input" name="description" placeholder="Uitleg, bv. Jonge stem, informeel, met verwijzingen naar social media" />
+    </div>
+    <textarea
+      class="input font-mono text-xs"
+      name="instructions"
+      rows={6}
+      required
+      placeholder={"Voice: ...\n- Hoe klinken de zinnen?\n- Welke toon en woorden?\n- Hoe zien de tussenkoppen eruit?"}
+    ></textarea>
+    <div class="flex flex-wrap items-center gap-4 text-sm">
+      <label class="flex items-center gap-2"><input type="checkbox" name="active" checked class="rounded border-gray-300" /> Actief</label>
+      <label class="flex items-center gap-2"><input type="checkbox" name="useVoiceSamples" class="rounded border-gray-300" /> Leer van mijn eigen blogs</label>
+      <button class="btn-primary">Toevoegen</button>
+    </div>
+  </form>
+</AdminLayout>

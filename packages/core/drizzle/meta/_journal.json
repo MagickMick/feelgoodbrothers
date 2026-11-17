@@ -50,6 +50,13 @@
       "when": 1794905069017,
       "tag": "0006_admin_2fa",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794918132128,
+      "tag": "0007_writing_styles",
+      "breakpoints": true
     }
   ]
 }

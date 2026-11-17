@@ -2,7 +2,8 @@
  * Prompts for the writing assistant + parsing of its output.
  *
  * The AI writes a DRAFT in the first person that Mick then rewrites into a real
- * story before publishing. The style rules below are distilled from Mick's own posts.
+ * story before publishing. The voice comes from the chosen writing style
+ * (writing_styles table, see styles-seed.ts); the rules below hold for every style.
  */
 import type { AiSessionParams, Locale } from "../schema.ts";
 
@@ -26,27 +27,25 @@ HERO_ALT: <one sentence describing a fitting photo, for alt text and finding a s
 ---
 <the blog post in Markdown: start directly with the story (no H1, no title repeated), use ## for 3-5 subheadings>`;
 
-const STYLE = `You write first-person blog drafts for Feelgood Brothers, a blog where people share honest, personal experiences with mental health challenges (panic attacks, anxiety, derealization, high sensitivity, depression).
+const INTRO = `You write first-person blog drafts for Feelgood Brothers, a blog where people share honest, personal experiences with mental health challenges (panic attacks, anxiety, derealization, high sensitivity, depression).
 
-The author will rewrite your draft into their own real story before publishing, so write a strong, believable starting point, not a finished piece.
+The author will rewrite your draft into their own real story before publishing, so write a strong, believable starting point, not a finished piece.`;
 
-Voice and style (learned from the author's own posts):
-- First person ("I"), one person, one concrete situation. Start in the middle of the moment: where am I, what am I doing, one small ordinary detail (what I just bought, the song that was playing, the weather).
-- Describe the body and the mind concretely: racing heart, heat rising, tunnel vision, muscles tensing, the urge to flee, the thoughts that talk me into the panic ("what if I faint right here?").
-- Honest and a bit vulnerable: doubt, embarrassment, what other people might think ("going to the restroom again after twenty minutes would look weird"), small humor allowed.
+const BASE_RULES = `Always (whatever the writing style):
+- First person ("I"), one person, one concrete situation.
+- Make it recognisable: concrete body sensations, thoughts and surroundings instead of abstract labels.
 - Imperfect coping: what I tried, what partly worked, what didn't. Never a miracle fix.
-- Plain spoken language, short paragraphs, varied sentence length. Subheadings describe the situation ("Stuck between strangers on the train"), not generic labels.
-- No clinical jargon, no diagnosis talk, no bullet-point advice lists, no "In conclusion", no motivational clichés ("you've got this!", "remember, you are not alone" as a closing line), no em dashes.
+- No clinical jargon, no diagnosis talk, no bullet-point advice lists, no "In conclusion", no motivational clichés ("you've got this!", "remember, you are not alone" as a closing line), no em dashes.`;
 
-Structure (use it as a flow, not as literal headings):
+const STRUCTURE = `Structure (use it as a flow, not as literal headings; when the writing style defines its own form, fit this flow into that form):
 1. The moment: where, when, what I was doing.
 2. The build-up: first signals in body and mind, what I see and hear around me.
 3. The peak: the panic or feeling at its strongest.
 4. How it ended: what I did, how it played out, imperfect.
 5. Afterwards: how I felt, what others noticed or didn't, reflection.
-6. What helps me: personal, specific (breathing, focusing on senses, accepting the feeling), clearly my own experience, not advice for the reader. Seeking professional help may come up naturally as part of my story.
+6. What helps me: personal, specific (breathing, focusing on senses, accepting the feeling), clearly my own experience, not advice for the reader. Seeking professional help may come up naturally as part of my story.`;
 
-Safety (always):
+const SAFETY = `Safety (always, also above the writing style):
 - No medical or medication advice, no dosages, no promises of a cure.
 - Never describe methods of self-harm or suicide. If the topic touches on dark thoughts, focus on the feeling, on hope and on reaching out for help.
 - The site already shows a note under every post recommending professional help; you don't need to add one.`;
@@ -66,7 +65,17 @@ function trimWords(text: string, max: number): string {
   return words.length <= max ? text : `${words.slice(0, max).join(" ")} …`;
 }
 
-export function buildSystemPrompt(locale: Locale, voiceSamples: VoiceSample[], placeholders: boolean): string {
+export interface PromptStyle {
+  name: string;
+  instructions: string;
+}
+
+export function buildSystemPrompt(
+  locale: Locale,
+  style: PromptStyle,
+  voiceSamples: VoiceSample[],
+  placeholders: boolean,
+): string {
   const samples = voiceSamples.length
     ? `\n\nExamples of the author's own posts. Match this tone, rhythm and level of honesty (do not copy their content):\n${voiceSamples
         .map((s, i) => `<example_${i + 1} title="${s.title.replace(/"/g, "'")}">\n${trimWords(s.body, 450)}\n</example_${i + 1}>`)
@@ -75,7 +84,8 @@ export function buildSystemPrompt(locale: Locale, voiceSamples: VoiceSample[], p
   const ph = placeholders
     ? `\n\nPlaceholders: in 3 to 6 places where a real personal detail would make the story more authentic, insert a placeholder in double square brackets that asks the author for it, written in the draft language, for example [[${locale === "nl" ? "Jouw detail: welk liedje werd er gespeeld?" : "Your detail: which song was playing?"}]]. Keep the surrounding sentence readable.`
     : "\n\nDo not use placeholders.";
-  return `${STYLE}\n\n${CONTEXT[locale]}${ph}\n\n${OUTPUT_FORMAT}${samples}`;
+  const styleBlock = `Writing style: ${style.name}\n${style.instructions.trim()}`;
+  return `${INTRO}\n\n${styleBlock}\n\n${BASE_RULES}\n\n${STRUCTURE}\n\n${SAFETY}\n\n${CONTEXT[locale]}${ph}\n\n${OUTPUT_FORMAT}${samples}`;
 }
 
 export interface GenerateInput {

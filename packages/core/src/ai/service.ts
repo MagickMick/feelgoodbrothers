@@ -11,10 +11,12 @@ import {
   postCategories,
   posts,
   situations,
+  writingStyles,
   type AiMessage,
   type AiSession,
   type AiSessionParams,
   type Locale,
+  type WritingStyle,
 } from "../schema.ts";
 import { getLivePosts } from "../posts.ts";
 import { savePost, ValidationError } from "../admin.ts";
@@ -27,8 +29,10 @@ import {
   buildTranslateMessage,
   buildTranslateSystem,
   parseDraft,
+  type PromptStyle,
   type VoiceSample,
 } from "./prompts.ts";
+import { DEFAULT_STYLE_KEY, MICK_STYLE } from "./styles-seed.ts";
 
 export const MAX_TURNS = 20;
 /** a lock older than this is treated as abandoned (crashed request) */
@@ -92,6 +96,66 @@ export async function saveSituation(
 
 export async function deleteSituation(id: number) {
   await getDb().delete(situations).where(eq(situations.id, id));
+}
+
+// ---------------------------------------------------------------------------
+// writing styles
+// ---------------------------------------------------------------------------
+export async function listWritingStyles(opts: { activeOnly?: boolean } = {}) {
+  return getDb()
+    .select()
+    .from(writingStyles)
+    .where(opts.activeOnly ? eq(writingStyles.active, true) : undefined)
+    .orderBy(asc(writingStyles.sortOrder), asc(writingStyles.id));
+}
+
+/** random active style */
+export async function pickWritingStyle(): Promise<WritingStyle | null> {
+  const list = await listWritingStyles({ activeOnly: true });
+  return list.length ? list[Math.floor(Math.random() * list.length)] : null;
+}
+
+/**
+ * The style a session writes in. A deleted style (or an old session without one)
+ * falls back to the default "mick" style, and to the built-in copy if that row is gone too.
+ */
+export async function resolveWritingStyle(styleId: number | null | undefined): Promise<PromptStyle & { useVoiceSamples: boolean }> {
+  const db = getDb();
+  if (styleId) {
+    const [row] = await db.select().from(writingStyles).where(eq(writingStyles.id, styleId));
+    if (row) return row;
+  }
+  const [def] = await db.select().from(writingStyles).where(eq(writingStyles.key, DEFAULT_STYLE_KEY));
+  return def ?? MICK_STYLE;
+}
+
+export async function saveWritingStyle(
+  id: number | null,
+  v: { name: string; description: string; instructions: string; useVoiceSamples: boolean; active: boolean; sortOrder?: number },
+) {
+  const values = {
+    name: v.name.trim(),
+    description: v.description.trim(),
+    instructions: v.instructions.trim(),
+    useVoiceSamples: v.useVoiceSamples,
+    active: v.active,
+    ...(v.sortOrder !== undefined && Number.isFinite(v.sortOrder) ? { sortOrder: Math.trunc(v.sortOrder) } : {}),
+  };
+  const fields: Record<string, string> = {};
+  if (!values.name) fields.name = "Geef de stijl een naam";
+  if (values.instructions.length < 20) fields.instructions = "Beschrijf de stijl voor de AI (minstens een paar zinnen)";
+  if (Object.keys(fields).length) throw new ValidationError(fields);
+  const db = getDb();
+  if (id) {
+    await db.update(writingStyles).set(values).where(eq(writingStyles.id, id));
+  } else {
+    const [{ max }] = await db.select({ max: sql<number>`coalesce(max(${writingStyles.sortOrder}), -1)::int` }).from(writingStyles);
+    await db.insert(writingStyles).values({ key: `custom-${randomUUID().slice(0, 8)}`, sortOrder: max + 1, ...values });
+  }
+}
+
+export async function deleteWritingStyle(id: number) {
+  await getDb().delete(writingStyles).where(eq(writingStyles.id, id));
 }
 
 // ---------------------------------------------------------------------------
@@ -235,7 +299,9 @@ async function startTurn(
   }
 
   const history: AiMessage[] = [...session.messages, { role: "user", content: userMessage }];
-  const system = buildSystemPrompt(locale, await voiceSamples(locale), session.params.placeholders);
+  const style = await resolveWritingStyle(session.params.styleId);
+  const samples = style.useVoiceSamples ? await voiceSamples(locale) : [];
+  const system = buildSystemPrompt(locale, style, samples, session.params.placeholders);
   const stream = await streamChat(useProvider, { system, messages: history, maxTokens: MAX_OUTPUT_TOKENS });
   recordUsage(stream.usage, {
     kind: session.messages.length === 0 ? "generate" : "revise",

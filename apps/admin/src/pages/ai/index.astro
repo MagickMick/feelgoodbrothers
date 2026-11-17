@@ -1,17 +1,23 @@
 ---
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import AiStudio from "@/components/AiStudio";
-import { getSession, listRecentSessions, listSituations, usageSince } from "@fgb/core/ai";
+import { getSession, listRecentSessions, listSituations, listWritingStyles, usageSince } from "@fgb/core/ai";
+import { DEFAULT_STYLE_KEY } from "@fgb/core/ai/styles";
 import { availableProviders, defaultProvider, modelFor, PROVIDER_LABELS } from "@fgb/core/ai/provider";
 import { getAllCategories } from "@fgb/core/posts";
 import { ADMIN_TZ, formatDateTime, localInputToDate } from "@fgb/core/time";
 import { parseDraft } from "@fgb/core/ai/prompts";
 
-const [categories, situations, recent] = await Promise.all([
+const [categories, situations, recent, allStyles] = await Promise.all([
   getAllCategories(),
   listSituations({ activeOnly: true }),
   listRecentSessions(12),
+  listWritingStyles(),
 ]);
+const styles = allStyles.filter((s) => s.active);
+const defaultStyle = styles.find((s) => s.key === DEFAULT_STYLE_KEY) ?? styles[0];
+const styleName = (id: number | null | undefined) =>
+  (allStyles.find((s) => s.id === id) ?? allStyles.find((s) => s.key === DEFAULT_STYLE_KEY))?.name ?? "";
 // start of the current month in the editor's timezone (the server runs in UTC)
 const ym = new Intl.DateTimeFormat("en-CA", { timeZone: ADMIN_TZ, year: "numeric", month: "2-digit" }).format(new Date());
 const monthStart = localInputToDate(`${ym}-01T00:00`)!;
@@ -41,6 +47,8 @@ if (sid) {
         .map((m) => m.content.replace(/\n\n\(Apply this feedback[\s\S]*$/, "")),
       postId: s.postId,
       provider: s.provider,
+      styleId: s.params.styleId ?? null,
+      styleName: styleName(s.params.styleId),
     };
   }
 }
@@ -74,6 +82,8 @@ function sessionTitle(content: string | undefined) {
     client:load
     categories={categories.map((c) => ({ id: c.id, nameEn: c.nameEn, nameNl: c.nameNl }))}
     situations={situations.map((s) => ({ id: s.id, categoryId: s.categoryId, labelEn: s.labelEn, labelNl: s.labelNl }))}
+    styles={styles.map((s) => ({ id: s.id, name: s.name, description: s.description }))}
+    defaultStyleId={defaultStyle?.id ?? null}
     providers={providers}
     defaultProvider={defaultProvider()}
     resume={resume}
@@ -91,6 +101,7 @@ function sessionTitle(content: string | undefined) {
                 <tr>
                   <td class="px-4 py-2">{s.locale === "nl" ? "🇳🇱" : "🇺🇸"} {sessionTitle(last?.content)}</td>
                   <td class="px-4 py-2 text-gray-500">{formatDateTime(s.updatedAt)}</td>
+                  <td class="px-4 py-2 text-gray-500">{styleName(s.params.styleId)}</td>
                   <td class="px-4 py-2 text-gray-500">{s.model}</td>
                   <td class="px-4 py-2 text-right">
                     {s.postId ? (
