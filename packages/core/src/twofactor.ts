@@ -275,7 +275,18 @@ export async function verifyChallengeCode(token: string | undefined, input: stri
   const given = Buffer.from(codeHash(challenge.id, code));
   const expected = Buffer.from(challenge.codeHash);
   if (code.length === 6 && given.length === expected.length && timingSafeEqual(given, expected)) {
-    await db.delete(loginChallenges).where(eq(loginChallenges.id, challenge.id));
+    const [consumed] = await db
+      .delete(loginChallenges)
+      .where(
+        and(
+          eq(loginChallenges.id, challenge.id),
+          eq(loginChallenges.codeHash, challenge.codeHash),
+          gt(loginChallenges.codeExpiresAt, new Date()),
+          gt(loginChallenges.expiresAt, new Date()),
+        ),
+      )
+      .returning({ id: loginChallenges.id });
+    if (!consumed) return { ok: false, reason: "code_inactive" };
     await clear(codeKey);
     return { ok: true, user };
   }
