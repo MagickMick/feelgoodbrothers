@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { renderPreview } from "@/lib/safeMarkdown";
 import { countPlaceholders } from "@fgb/core/ai/prompts";
+import AudioPanel, { type AudioInfo } from "./AudioPanel";
 
 export interface EditorPost {
   id?: number;
@@ -40,6 +41,8 @@ interface Props {
   errors: Record<string, string>;
   siteUrl: string;
   hasTranslation: boolean;
+  /** read-aloud panel; only for saved posts */
+  audio?: AudioInfo | null;
 }
 
 const BRAND = " | Feelgood Brothers";
@@ -83,7 +86,7 @@ async function uploadFile(file: File, alt = ""): Promise<{ id: number; url: stri
   return json;
 }
 
-export default function PostEditor({ post, authors, categories, errors, siteUrl, hasTranslation }: Props) {
+export default function PostEditor({ post, authors, categories, errors, siteUrl, hasTranslation, audio }: Props) {
   const [title, setTitle] = useState(post.title);
   const [slug, setSlug] = useState(post.slug);
   const [slugTouched, setSlugTouched] = useState(Boolean(post.id));
@@ -394,6 +397,10 @@ export default function PostEditor({ post, authors, categories, errors, siteUrl,
             </button>
           </div>
         </div>
+
+        {post.id && audio && (
+          <AudioPanel postId={post.id} audio={audio} dirty={dirty || Object.keys(errors).length > 0} placeholdersOpen={placeholdersOpen} />
+        )}
 
         <div className="card space-y-3">
           <h2 className="font-semibold">Type blog</h2>

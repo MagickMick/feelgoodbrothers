@@ -11,6 +11,7 @@ import { inputToEditorPost, parsePostForm, toEditorPost } from "@/lib/postForm";
 import { heroUrlFor, loadEditorOptions } from "@/lib/editorData";
 import { FLAGS, siteUrl, statusInfo, str } from "@/lib/ui";
 import { availableProviders, PROVIDER_LABELS } from "@fgb/core/ai/provider";
+import { audioUrl, estimateMinutes, speechConfig, speechText, speechTextHash } from "@fgb/core/ai/speech";
 
 const id = Number(Astro.params.id);
 const existing = Number.isFinite(id) ? await getPostById(id) : null;
@@ -46,6 +47,16 @@ const urlError = Astro.url.searchParams.get("error");
 const aiProviders = availableProviders().filter((p) => p !== "mock" || availableProviders().length === 1);
 const otherLang = existing.locale === "en" ? "Nederlandse" : "Engelse";
 const liveUrl = siteUrl() + postPath(existing.locale, existing.slug);
+const audioNotice = Astro.url.searchParams.get("audio");
+const audio = {
+  url: existing.audioKey ? audioUrl(existing.audioKey) : null,
+  seconds: existing.audioDurationSec,
+  voice: existing.audioVoice,
+  createdAt: existing.audioCreatedAt ? formatDateTime(existing.audioCreatedAt) : null,
+  stale: Boolean(existing.audioKey && existing.audioTextHash !== speechTextHash(existing)),
+  estimateMinutes: estimateMinutes(speechText(existing)),
+  mock: speechConfig(existing.locale).mock,
+};
 ---
 
 <AdminLayout title={existing.title || "Blog bewerken"} wide>
@@ -87,6 +98,10 @@ const liveUrl = siteUrl() + postPath(existing.locale, existing.slug);
   {translatedByAi && (
     <p class="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800">✨ Vertaald met AI als concept. Lees het na voordat je publiceert.</p>
   )}
+  {audioNotice === "made" && (
+    <p class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-800">🔊 Voorlezing gemaakt. Luister hem na in het blok "Voorlezen".{s.label === "Live" && " De speler staat nu op de blog."}</p>
+  )}
+  {audioNotice === "deleted" && <p class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-800">Voorlezing verwijderd.</p>}
   {urlError && <p class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{urlError}</p>}
   {saved && Object.keys(errors).length === 0 && (
     <p class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-800">✓ Opgeslagen</p>
@@ -100,6 +115,7 @@ const liveUrl = siteUrl() + postPath(existing.locale, existing.slug);
     errors={errors}
     siteUrl={siteUrl()}
     hasTranslation={Boolean(translation)}
+    audio={audio}
   />
 
   <form

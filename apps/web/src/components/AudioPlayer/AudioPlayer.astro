@@ -1,0 +1,133 @@
+---
+/**
+ * Read-aloud player for a blog post. The MP3 only loads when the visitor presses play.
+ */
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { useTranslations } from "@js/translationUtils";
+
+interface Props {
+  src: string;
+  seconds: number;
+}
+
+const { src, seconds } = Astro.props;
+const t = useTranslations(getLocaleFromUrl(Astro.url));
+const minutes = Math.max(1, Math.round(seconds / 60));
+const total = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+---
+
+<div
+  class="audio-player mb-8 rounded-xl bg-base-200/50 p-4"
+  data-label-play={t("listen")}
+  data-label-pause={t("listen_pause")}
+>
+  <audio preload="none" src={src}></audio>
+  <div class="flex items-center gap-3">
+    <button
+      type="button"
+      class="ap-toggle primary-focus flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-500 text-white transition hover:bg-primary-600"
+      aria-label={t("listen")}
+    >
+      <svg class="ap-icon-play h-5 w-5 translate-x-[1px]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"></path></svg>
+      <svg class="ap-icon-pause hidden h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg>
+    </button>
+    <div class="min-w-0 flex-1">
+      <p class="truncate text-sm font-medium">
+        {t("listen")} <span class="font-normal opacity-70">· {minutes} min</span>
+      </p>
+      <div class="mt-1.5 flex items-center gap-2 text-xs tabular-nums opacity-80">
+        <span class="ap-current">0:00</span>
+        <input
+          type="range"
+          class="ap-seek h-1 flex-1 cursor-pointer accent-primary-500"
+          min="0"
+          max={seconds}
+          step="1"
+          value="0"
+          aria-label={t("listen")}
+        />
+        <span class="ap-total">{total}</span>
+      </div>
+    </div>
+    <button
+      type="button"
+      class="ap-speed primary-focus shrink-0 rounded-full border border-gray-400/50 px-2 py-1 text-xs tabular-nums opacity-80 hover:opacity-100"
+      aria-description={t("listen_speed")}
+      title={t("listen_speed")}>1×</button
+    >
+  </div>
+  <p class="mt-2 text-xs opacity-60">{t("listen_ai_voice")}</p>
+</div>
+
+<script>
+  const SPEEDS = [1, 1.25, 1.5, 0.75];
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+  // With the ClientRouter (view transitions) this module runs only once, while every
+  // navigation swaps in new player markup. So set up on each astro:page-load, and mark
+  // each player so it is never wired twice.
+  function setupPlayers() {
+    document.querySelectorAll<HTMLElement>(".audio-player:not([data-ready])").forEach(setupPlayer);
+  }
+
+  function setupPlayer(root: HTMLElement) {
+    root.dataset.ready = "";
+    const audio = root.querySelector("audio")!;
+    const toggle = root.querySelector<HTMLButtonElement>(".ap-toggle")!;
+    const seek = root.querySelector<HTMLInputElement>(".ap-seek")!;
+    const current = root.querySelector<HTMLElement>(".ap-current")!;
+    const total = root.querySelector<HTMLElement>(".ap-total")!;
+    const speed = root.querySelector<HTMLButtonElement>(".ap-speed")!;
+    const iconPlay = root.querySelector(".ap-icon-play")!;
+    const iconPause = root.querySelector(".ap-icon-pause")!;
+    let seeking = false;
+
+    const render = () => {
+      const playing = !audio.paused;
+      iconPlay.classList.toggle("hidden", playing);
+      iconPause.classList.toggle("hidden", !playing);
+      toggle.setAttribute("aria-label", (playing ? root.dataset.labelPause : root.dataset.labelPlay) ?? "");
+    };
+
+    toggle.addEventListener("click", () => {
+      if (audio.paused) void audio.play();
+      else audio.pause();
+    });
+    audio.addEventListener("play", render);
+    audio.addEventListener("pause", render);
+    audio.addEventListener("ended", () => {
+      audio.currentTime = 0;
+      render();
+    });
+    audio.addEventListener("loadedmetadata", () => {
+      if (Number.isFinite(audio.duration)) {
+        seek.max = String(Math.round(audio.duration));
+        total.textContent = fmt(audio.duration);
+      }
+    });
+    audio.addEventListener("timeupdate", () => {
+      if (seeking) return;
+      seek.value = String(audio.currentTime);
+      current.textContent = fmt(audio.currentTime);
+    });
+    seek.addEventListener("input", () => {
+      seeking = true;
+      current.textContent = fmt(Number(seek.value));
+    });
+    seek.addEventListener("change", () => {
+      seeking = false;
+      // seeking before the first play loads the file first
+      if (audio.readyState === 0) audio.load();
+      audio.currentTime = Number(seek.value);
+    });
+    speed.addEventListener("click", () => {
+      const next = SPEEDS[(SPEEDS.indexOf(audio.playbackRate) + 1) % SPEEDS.length];
+      audio.defaultPlaybackRate = next;
+      audio.playbackRate = next;
+      speed.textContent = `${next}×`;
+    });
+  }
+
+  document.addEventListener("astro:page-load", setupPlayers);
+  setupPlayers(); // also covers pages without the ClientRouter
+</script>

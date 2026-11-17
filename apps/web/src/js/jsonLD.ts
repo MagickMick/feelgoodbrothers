@@ -65,6 +65,8 @@ export interface BlogPostingInput {
   author?: { name: string; url?: string } | null;
   categories: string[];
   wordCount: number;
+  /** read-aloud version */
+  audio?: { url: string; seconds: number } | null;
 }
 
 export function blogPostingLd(p: BlogPostingInput) {
@@ -87,6 +89,16 @@ export function blogPostingLd(p: BlogPostingInput) {
     articleSection: p.categories,
     keywords: p.categories.join(", "),
     wordCount: p.wordCount,
+    ...(p.audio
+      ? {
+          audio: {
+            "@type": "AudioObject",
+            contentUrl: absoluteUrl(p.audio.url),
+            encodingFormat: "audio/mpeg",
+            duration: `PT${Math.floor(p.audio.seconds / 60)}M${p.audio.seconds % 60}S`,
+          },
+        }
+      : {}),
   };
 }
 

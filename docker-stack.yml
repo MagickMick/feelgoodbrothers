@@ -30,6 +30,9 @@ x-ai-env: &ai-env
   OPENAI_MODEL: ${OPENAI_MODEL:-}
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+  OPENAI_TTS_MODEL: ${OPENAI_TTS_MODEL:-}
+  OPENAI_TTS_VOICE_EN: ${OPENAI_TTS_VOICE_EN:-}
+  OPENAI_TTS_VOICE_NL: ${OPENAI_TTS_VOICE_NL:-}
 
 # outgoing mail (admin only): login codes and lockout warnings. Same setup as TransferNews (SMTP).
 x-mail-env: &mail-env
