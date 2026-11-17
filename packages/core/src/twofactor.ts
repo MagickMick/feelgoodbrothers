@@ -2,12 +2,14 @@
  * Admin login hardening: lockouts, a 6-digit code by mail (2FA) and trusted devices.
  *
  * Password   5 wrong per email in 15 min -> locked 15 min; the next lock within 24 h -> 1 h.
- *            Per IP: 20 wrong in 15 min -> 1 h. A correct password resets the email counter.
+ *            Per IP: 20 wrong in 15 min -> 1 h, only for public IPs (see isPublicIp). A correct
+ *            password resets the email counter.
  * Mail code  6 digits, 10 min valid, single use. 3 wrong -> that code is void (send a new one).
  *            10 wrong per account within 1 h -> account locked 1 h.
  *            Max 5 code mails per hour, 1 minute between resends.
  * Devices    "remember this device" skips the code (never the password) for 30 days.
- * Every lock sends a warning mail to the admin.
+ * Every lock sends a warning mail: an account lock to that account, an IP lock (not tied to one
+ * account) to every admin account.
  *
  * All counters live in Postgres (auth_throttle), so a deploy or restart doesn't reset them.
  */
@@ -126,7 +128,7 @@ async function sendCodeMail(user: AdminUser, code: string): Promise<void> {
 
 /** warning mail on a lockout; never throws (a failing mail must not break the login page) */
 async function sendLockAlert(user: AdminUser, what: string, until: Date, ip: string): Promise<void> {
-  const text = `${what}\n\nDe admin is voor jouw account geblokkeerd tot ${timeNl(until)}.\nIP-adres: ${ip || "onbekend"}\n\nWas jij dit niet? Dan probeert iemand in te loggen. ${
+  const text = `${what}\n\nDe admin is voor jouw account geblokkeerd tot ${timeNl(until)}.\nIP-adres: ${shownIp(ip)}\n\nWas jij dit niet? Dan probeert iemand in te loggen. ${
     what.includes("code") ? "Diegene kende je wachtwoord: verander het direct." : "Gebruik een sterk, uniek wachtwoord."
   }`;
   await sendMail({
@@ -135,6 +137,52 @@ async function sendLockAlert(user: AdminUser, what: string, until: Date, ip: str
     text,
     html: mailLayout("Mislukte inlogpogingen", text.split("\n").map((l) => `<p>${escapeHtml(l)}</p>`).join("")),
   }).catch((err) => console.error("[auth] lock alert mail failed:", err));
+}
+
+/**
+ * True for a real, public client IP. Private, loopback and link-local addresses are never locked:
+ * behind a proxy that hides the visitor (e.g. Docker Swarm's ingress mesh, which makes every
+ * request come from 10.0.0.x) one lock would shut out everybody.
+ */
+export function isPublicIp(ip: string): boolean {
+  const v = ip.trim().toLowerCase().replace(/^::ffff:/, "");
+  if (!v) return false;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(v)) {
+    const [a, b] = v.split(".").map(Number);
+    if (a === 10 || a === 127 || a === 0) return false;
+    if (a === 172 && b >= 16 && b <= 31) return false;
+    if (a === 192 && b === 168) return false;
+    if (a === 169 && b === 254) return false;
+    if (a === 100 && b >= 64 && b <= 127) return false; // carrier-grade NAT
+    return true;
+  }
+  if (v.includes(":")) return !(v === "::1" || v === "::" || /^f[cd]/.test(v) || /^fe[89ab]/.test(v));
+  return false;
+}
+
+function shownIp(ip: string): string {
+  return isPublicIp(ip) ? ip : "onbekend (achter een proxy)";
+}
+
+async function allAdmins(): Promise<AdminUser[]> {
+  return getDb().select().from(adminUsers);
+}
+
+/**
+ * IP lock: it belongs to no single account (the attempts may use unknown or several addresses),
+ * so every admin account gets the warning. Never throws.
+ */
+async function sendIpLockAlert(ip: string, lastEmail: string, until: Date): Promise<void> {
+  const tried = lastEmail.trim().slice(0, 120) || "(leeg)";
+  const text = `Er zijn ${RULES.passwordIp.max} mislukte inlogpogingen gedaan vanaf IP-adres ${ip} binnen 15 minuten.\n\nDat IP-adres is geblokkeerd tot ${timeNl(until)}.\nLaatst geprobeerde e-mailadres: ${tried}\n\nDit is waarschijnlijk iemand die wachtwoorden probeert te raden. Je hoeft niets te doen; je eigen account is niet geblokkeerd.`;
+  for (const admin of await allAdmins().catch(() => [])) {
+    await sendMail({
+      to: admin.email,
+      subject: "Let op: IP-adres geblokkeerd op de admin",
+      text,
+      html: mailLayout("IP-adres geblokkeerd", text.split("\n").map((l) => `<p>${escapeHtml(l)}</p>`).join("")),
+    }).catch((err) => console.error("[auth] IP lock alert mail failed:", err));
+  }
 }
 
 async function findUserByEmail(email: string): Promise<AdminUser | undefined> {
@@ -153,9 +201,10 @@ export type PasswordResult =
 
 export async function attemptPassword(email: string, password: string, ip: string): Promise<PasswordResult> {
   const emailKey = `pw:${email.trim().toLowerCase()}`;
-  const ipKey = `pw-ip:${ip}`;
+  // per-IP limit only for a real visitor IP, never for a proxy/internal address shared by everyone
+  const ipKey = isPublicIp(ip) ? `pw-ip:${ip}` : null;
 
-  const locked = later(await lockedUntil(emailKey), await lockedUntil(ipKey));
+  const locked = later(await lockedUntil(emailKey), ipKey ? await lockedUntil(ipKey) : null);
   if (locked) return { ok: false, reason: "locked", until: locked };
 
   const user = await verifyLogin(email, password);
@@ -173,8 +222,10 @@ export async function attemptPassword(email: string, password: string, ip: strin
     const target = await findUserByEmail(email);
     if (target) void sendLockAlert(target, `Er is ${RULES.password.max} keer een verkeerd wachtwoord ingevuld voor ${target.email}.`, until, ip);
   }
-  if ((await hit(ipKey, RULES.passwordIp.windowMs)) >= RULES.passwordIp.max) {
-    until = later(until, await lock(ipKey, RULES.passwordIp));
+  if (ipKey && (await hit(ipKey, RULES.passwordIp.windowMs)) >= RULES.passwordIp.max) {
+    const ipUntil = await lock(ipKey, RULES.passwordIp);
+    until = later(until, ipUntil);
+    void sendIpLockAlert(ip, email, ipUntil);
   }
   return until ? { ok: false, reason: "locked", until } : { ok: false, reason: "invalid" };
 }
