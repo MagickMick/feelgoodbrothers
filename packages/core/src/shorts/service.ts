@@ -17,7 +17,7 @@ import sharp from "sharp";
 import { getDb } from "../db.ts";
 import { aiUsage, posts, shorts, type Locale, type Short } from "../schema.ts";
 import { uploadsDir } from "../storage.ts";
-import { absoluteUrl, postPath } from "../posts.ts";
+import { SITE_URL, postPath } from "../posts.ts";
 import { AiError, defaultProvider, streamChat } from "../ai/provider.ts";
 import { deleteAudioFile, mapLimit, mp3Frames, silentMp3, speechConfig, ttsChunk } from "../ai/speech.ts";
 import {
@@ -112,8 +112,23 @@ function mockStoryboard(locale: Locale, title: string): Storyboard {
 }
 
 /** add the post link to the YouTube description */
+/**
+ * The public site address for anything that ends up in a video or on YouTube. A local
+ * SITE_URL (localhost) must never show up there, so that falls back to the real domain.
+ */
+export function shortSiteUrl(): string {
+  const host = new URL(SITE_URL).hostname;
+  const local = host === "localhost" || host === "0.0.0.0" || host.startsWith("127.") || host.endsWith(".local");
+  return local ? "https://feelgoodbrothers.com" : SITE_URL;
+}
+
+/** what the end card shows, e.g. "feelgoodbrothers.com" */
+export function shortSiteHost(): string {
+  return new URL(shortSiteUrl()).host.replace(/^www\./, "");
+}
+
 function withLink(sb: Storyboard, post: { locale: Locale; slug: string }): Storyboard {
-  const url = `${absoluteUrl(postPath(post.locale, post.slug))}?utm_source=youtube&utm_medium=shorts`;
+  const url = `${shortSiteUrl()}${postPath(post.locale, post.slug)}?utm_source=youtube&utm_medium=shorts`;
   if (sb.youtube.description.includes(url)) return sb;
   const label = post.locale === "nl" ? "Lees het hele verhaal:" : "Read the full story:";
   return { ...sb, youtube: { ...sb.youtube, description: `${sb.youtube.description}\n\n${label} ${url}`.trim() } };

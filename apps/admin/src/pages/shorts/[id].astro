@@ -1,15 +1,14 @@
 ---
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import ShortStudio from "@/components/ShortStudio";
-import { getShort, shortCostHint, shortsMockMode } from "@fgb/core/shorts";
+import { getShort, shortCostHint, shortSiteHost, shortsMockMode } from "@fgb/core/shorts";
 import { getPostById } from "@fgb/core/posts";
-import { siteUrl } from "@/lib/ui";
 
 const short = await getShort(Number(Astro.params.id));
 if (!short) return Astro.redirect("/shorts/");
 const post = await getPostById(short.postId);
 if (!post) return Astro.redirect("/shorts/");
-const siteHost = new URL(siteUrl()).host.replace(/^www\./, "");
+const siteHost = shortSiteHost();
 ---
 
 <AdminLayout title={`Short: ${post.title}`} wide>
