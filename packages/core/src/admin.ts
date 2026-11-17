@@ -20,6 +20,7 @@ import { slugify } from "./text.ts";
 import { deleteImageFiles, processImage } from "./storage.ts";
 import { countPlaceholders } from "./ai/prompts.ts";
 import { notifyContentChanged } from "./notify.ts";
+import { deleteAudioFile } from "./ai/speech.ts";
 
 export class ValidationError extends Error {
   constructor(public fields: Record<string, string>) {
@@ -223,6 +224,7 @@ export async function deletePost(id: number): Promise<void> {
   const [old] = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
   if (!old) return;
   await db.delete(posts).where(eq(posts.id, id));
+  await deleteAudioFile(old.audioKey);
   if (isLive(old.status, old.publishAt)) void notifyContentChanged(affectedPaths(old.locale, old.slug));
 }
 

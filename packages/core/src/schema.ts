@@ -111,6 +111,15 @@ export const posts = pgTable(
     /** AI writing assistant: the session this draft came from and the original AI text (marks the post as an AI draft) */
     aiSessionId: integer("ai_session_id"),
     aiDraftBody: text("ai_draft_body"),
+    /** read-aloud version: file /media/<audioKey>.mp3, made on request in the editor */
+    audioKey: text("audio_key"),
+    audioDurationSec: integer("audio_duration_sec"),
+    audioVoice: text("audio_voice"),
+    /** sha256 of the text that was read aloud, to warn when the post changed since */
+    audioTextHash: text("audio_text_hash"),
+    audioCreatedAt: timestamp("audio_created_at", { withTimezone: true }),
+    /** set while audio is being generated (one generation per post at a time) */
+    audioBusySince: timestamp("audio_busy_since", { withTimezone: true }),
   },
   (t) => [
     uniqueIndex("posts_locale_slug_idx").on(t.locale, t.slug),
@@ -216,7 +225,7 @@ export const aiUsage = pgTable(
     id: serial("id").primaryKey(),
     sessionId: integer("session_id").references(() => aiSessions.id, { onDelete: "set null" }),
     postId: integer("post_id").references(() => posts.id, { onDelete: "set null" }),
-    kind: text("kind").$type<"generate" | "revise" | "translate">().notNull(),
+    kind: text("kind").$type<"generate" | "revise" | "translate" | "speech">().notNull(),
     provider: text("provider").notNull(),
     model: text("model").notNull(),
     inputTokens: integer("input_tokens").notNull().default(0),

@@ -123,24 +123,58 @@ const CONTENT_TYPES: Record<string, string> = {
   ".jpeg": "image/jpeg",
   ".png": "image/png",
   ".gif": "image/gif",
+  ".mp3": "audio/mpeg",
 };
 
-/** returns a Response for /media/<file>, or 404. Guards against path traversal. */
-export async function serveMediaFile(fileName: string): Promise<Response> {
+/** "bytes=0-99" / "bytes=100-" / "bytes=-500" -> [start, end] inclusive, or null when invalid */
+function parseRange(header: string, size: number): [number, number] | null {
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!m || (m[1] === "" && m[2] === "")) return null;
+  let start: number;
+  let end: number;
+  if (m[1] === "") {
+    start = Math.max(0, size - Number(m[2]));
+    end = size - 1;
+  } else {
+    start = Number(m[1]);
+    end = m[2] === "" ? size - 1 : Math.min(Number(m[2]), size - 1);
+  }
+  return start <= end && start < size ? [start, end] : null;
+}
+
+/**
+ * returns a Response for /media/<file>, or 404. Guards against path traversal.
+ * Audio supports Range requests (Safari/iOS need them to play and seek).
+ */
+export async function serveMediaFile(fileName: string, rangeHeader?: string | null): Promise<Response> {
   const safe = path.basename(fileName);
   const ext = path.extname(safe).toLowerCase();
   const type = CONTENT_TYPES[ext];
   if (!type || safe !== fileName) return new Response("Not found", { status: 404 });
+  if (ext === ".mp3" && !safe.startsWith("audio-")) return new Response("Not found", { status: 404 });
   const full = path.join(uploadsDir(), safe);
   try {
     await stat(full);
     const data = await readFile(full);
-    return new Response(new Uint8Array(data), {
-      headers: {
-        "Content-Type": type,
-        "Cache-Control": "public, max-age=31536000, immutable",
-      },
-    });
+    const headers: Record<string, string> = {
+      "Content-Type": type,
+      "Cache-Control": "public, max-age=31536000, immutable",
+    };
+    if (ext === ".mp3") {
+      headers["Accept-Ranges"] = "bytes";
+      if (rangeHeader) {
+        const range = parseRange(rangeHeader, data.length);
+        if (!range) {
+          return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${data.length}` } });
+        }
+        const [start, end] = range;
+        return new Response(new Uint8Array(data.subarray(start, end + 1)), {
+          status: 206,
+          headers: { ...headers, "Content-Range": `bytes ${start}-${end}/${data.length}` },
+        });
+      }
+    }
+    return new Response(new Uint8Array(data), { headers });
   } catch {
     return new Response("Not found", { status: 404 });
   }

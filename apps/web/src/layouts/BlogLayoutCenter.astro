@@ -5,6 +5,7 @@ import Button from "@components/Button/Button.astro";
 import MediaImage from "@components/MediaImage/MediaImage.astro";
 import PostCardSmall from "@components/PostCard/PostCardSmall.astro";
 import GuestBadge from "@components/GuestBadge/GuestBadge.astro";
+import AudioPlayer from "@components/AudioPlayer/AudioPlayer.astro";
 
 import {
   absoluteUrl,
@@ -48,6 +49,8 @@ const guestName = isGuest ? post.guestName?.trim() || null : null;
 // team author is only shown on team posts
 const author = isGuest ? null : post.author;
 const storyEmail = getTranslatedData("siteData", currLocale).story.email;
+// read-aloud version (made in the admin editor)
+const audio = post.audioKey && post.audioDurationSec ? { url: `/media/${post.audioKey}.mp3`, seconds: post.audioDurationSec } : null;
 
 const crumbs = [
   { name: t("home"), path: getRelativeLocaleUrl(currLocale, "/") },
@@ -78,6 +81,7 @@ const jsonLd = [
         : null,
     categories: post.categories.map((c) => categoryName(currLocale, c)),
     wordCount: wordCount(post.body),
+    audio,
   }),
   breadcrumbLd(crumbs),
 ];
@@ -205,6 +209,7 @@ const bio = author ? (currLocale === "nl" ? author.bioNl : author.bioEn) : "";
               </div>
             )
           }
+          {audio && <AudioPlayer src={audio.url} seconds={audio.seconds} />}
           <section id="blog-post-content" class="prose mx-auto md:text-lg" set:html={html} />
 
           <!-- disclaimer + helplines (E-E-A-T / YMYL) -->
