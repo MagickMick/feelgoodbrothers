@@ -13,6 +13,11 @@ interface Situation {
   labelEn: string;
   labelNl: string;
 }
+interface Style {
+  id: number;
+  name: string;
+  description: string;
+}
 interface Provider {
   id: string;
   label: string;
@@ -27,11 +32,15 @@ interface Resume {
   feedback: string[];
   postId: number | null;
   provider: string;
+  styleId: number | null;
+  styleName: string;
 }
 
 interface Props {
   categories: Category[];
   situations: Situation[];
+  styles: Style[];
+  defaultStyleId: number | null;
   providers: Provider[];
   defaultProvider: string;
   resume: Resume | null;
@@ -41,7 +50,7 @@ const ERROR_MARKER = "\u0000AI_ERROR:";
 
 type Length = "short" | "medium" | "long";
 
-export default function AiStudio({ categories, situations, providers, defaultProvider, resume }: Props) {
+export default function AiStudio({ categories, situations, styles, defaultStyleId, providers, defaultProvider, resume }: Props) {
   // form
   const [locale, setLocale] = useState<"en" | "nl">(resume?.locale ?? "en");
   const [categoryIds, setCategoryIds] = useState<number[]>(resume?.categoryIds ?? []);
@@ -53,10 +62,16 @@ export default function AiStudio({ categories, situations, providers, defaultPro
   const [wishes, setWishes] = useState("");
   const [placeholders, setPlaceholders] = useState(true);
   const [provider, setProvider] = useState(resume?.provider ?? defaultProvider);
+  // "random" | style id
+  const [styleChoice, setStyleChoice] = useState<string>(() => {
+    const resumed = styles.find((s) => s.id === resume?.styleId);
+    return String(resumed?.id ?? defaultStyleId ?? styles[0]?.id ?? "");
+  });
 
   // session
   const [sessionId, setSessionId] = useState<number | null>(resume?.sessionId ?? null);
   const [situationLabel, setSituationLabel] = useState(resume?.situationLabel ?? "");
+  const [styleLabel, setStyleLabel] = useState(resume?.styleName ?? "");
   const [raw, setRaw] = useState(resume?.lastDraft ?? "");
   const [feedbackLog, setFeedbackLog] = useState<string[]>(resume?.feedback ?? []);
   const [feedback, setFeedback] = useState("");
@@ -72,6 +87,7 @@ export default function AiStudio({ categories, situations, providers, defaultPro
   const words = draft.body ? draft.body.split(/\s+/).filter(Boolean).length : 0;
   const openPlaceholders = countPlaceholders(draft.body);
 
+  const selectedStyle = styles.find((s) => String(s.id) === styleChoice);
   const situationOptions = situations.filter((s) => categoryIds.includes(s.categoryId));
   const catName = (c: Category) => (locale === "nl" ? c.nameNl : c.nameEn);
   const sitName = (s: Situation) => (locale === "nl" ? s.labelNl : s.labelEn);
@@ -134,6 +150,7 @@ export default function AiStudio({ categories, situations, providers, defaultPro
           wishes,
           placeholders,
           provider,
+          styleId: styleChoice,
         }),
       });
       const json = await res.json();
@@ -143,6 +160,7 @@ export default function AiStudio({ categories, situations, providers, defaultPro
       setSituationLabel(
         situationChoice === "custom" ? situationText : json.situationLabel || (picked ? sitName(picked) : ""),
       );
+      setStyleLabel(json.styleName ?? "");
       window.history.replaceState(null, "", `/ai/?session=${json.sessionId}`);
       await streamTurn(json.sessionId, null);
     } catch (err) {
@@ -293,6 +311,19 @@ export default function AiStudio({ categories, situations, providers, defaultPro
             </div>
 
             <div>
+              <label className="label" htmlFor="style">Schrijfstijl</label>
+              <select id="style" className="input" value={styleChoice} onChange={(e) => setStyleChoice(e.target.value)}>
+                {styles.length === 0 && <option value="">Standaard</option>}
+                {styles.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+                {styles.length > 1 && <option value="random">🎲 Verras me (willekeurige stijl)</option>}
+              </select>
+              {selectedStyle?.description && <p className="mt-1 text-xs text-gray-500">{selectedStyle.description}</p>}
+              <a href="/styles/" className="mt-1 inline-block text-xs text-gray-500 hover:text-brand-600">Schrijfstijlen beheren</a>
+            </div>
+
+            <div>
               <label className="label" htmlFor="persona">Wie (optioneel)</label>
               <input
                 id="persona"
@@ -417,6 +448,7 @@ export default function AiStudio({ categories, situations, providers, defaultPro
             <>
               <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                 {situationLabel && <span className="badge bg-gray-100 text-gray-700">📍 {situationLabel}</span>}
+                {styleLabel && <span className="badge bg-gray-100 text-gray-700">🖋️ {styleLabel}</span>}
                 <span>{words} woorden</span>
                 {openPlaceholders > 0 && <span className="badge bg-amber-100 text-amber-800">{openPlaceholders} invulpunten</span>}
                 {busy && <span className="animate-pulse text-brand-600">AI schrijft…</span>}

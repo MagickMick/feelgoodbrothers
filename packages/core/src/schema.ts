@@ -133,6 +133,15 @@ export const postCategories = pgTable(
   (t) => [primaryKey({ columns: [t.postId, t.categoryId] })],
 );
 
+/**
+ * Starter data that has been inserted once (situations, writing styles). With this marker a
+ * list the editor emptied on purpose stays empty instead of being re-seeded on every restart.
+ */
+export const seedMarkers = pgTable("seed_markers", {
+  key: text("key").primaryKey(),
+  seededAt: timestamp("seeded_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ---------------------------------------------------------------------------
 // AI writing assistant
 // ---------------------------------------------------------------------------
@@ -154,6 +163,26 @@ export const situations = pgTable(
   (t) => [index("situations_category_idx").on(t.categoryId)],
 );
 
+/** writing styles for the assistant ("Mick", "Diary", "Minute by minute"); instructions go into the system prompt */
+export const writingStyles = pgTable(
+  "writing_styles",
+  {
+    id: serial("id").primaryKey(),
+    /** stable key for the seeded styles ("mick" is the default) */
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    /** short Dutch explanation shown in the admin */
+    description: text("description").notNull().default(""),
+    /** English instructions for the AI: voice, tone, form */
+    instructions: text("instructions").notNull(),
+    /** send the author's own latest posts along as tone examples */
+    useVoiceSamples: boolean("use_voice_samples").notNull().default(false),
+    active: boolean("active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [uniqueIndex("writing_styles_key_idx").on(t.key)],
+);
+
 export interface AiMessage {
   role: "user" | "assistant";
   content: string;
@@ -168,6 +197,8 @@ export interface AiSessionParams {
   helps: string;
   wishes: string;
   placeholders: boolean;
+  /** writing_styles.id; missing on sessions from before styles existed (= default style) */
+  styleId?: number | null;
 }
 
 export const aiSessions = pgTable("ai_sessions", {
@@ -320,3 +351,4 @@ export type AdminUser = typeof adminUsers.$inferSelect;
 
 export type Situation = typeof situations.$inferSelect;
 export type AiSession = typeof aiSessions.$inferSelect;
+export type WritingStyle = typeof writingStyles.$inferSelect;

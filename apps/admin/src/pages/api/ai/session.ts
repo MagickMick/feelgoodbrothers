@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { createSession, pickSituation } from "@fgb/core/ai";
+import { createSession, listWritingStyles, pickSituation, pickWritingStyle } from "@fgb/core/ai";
 import { AiError, availableProviders, defaultProvider, PROVIDER_LABELS, type AiProviderName } from "@fgb/core/ai/provider";
 import type { AiSessionParams } from "@fgb/core/schema";
 
@@ -25,6 +25,19 @@ export const POST: APIRoute = async ({ request }) => {
     situationId = picked?.id ?? null;
     situationLabel = picked ? (locale === "nl" ? picked.labelNl : picked.labelEn) : "";
   }
+  // writing style: an active style id, "random", or nothing (= default style)
+  let styleId: number | null = null;
+  let styleName = "";
+  if (body.styleId === "random") {
+    const picked = await pickWritingStyle();
+    styleId = picked?.id ?? null;
+    styleName = picked?.name ?? "";
+  } else if (Number(body.styleId) > 0) {
+    const style = (await listWritingStyles({ activeOnly: true })).find((s) => s.id === Number(body.styleId));
+    if (!style) return Response.json({ error: "Deze schrijfstijl bestaat niet (meer). Herlaad de pagina." }, { status: 400 });
+    styleId = style.id;
+    styleName = style.name;
+  }
   const length = ["short", "medium", "long"].includes(body.length) ? body.length : "medium";
   const params: AiSessionParams = {
     categoryIds,
@@ -35,10 +48,11 @@ export const POST: APIRoute = async ({ request }) => {
     helps: String(body.helps ?? "").slice(0, 300),
     wishes: String(body.wishes ?? "").slice(0, 1500),
     placeholders: body.placeholders !== false,
+    styleId,
   };
   try {
     const session = await createSession(locale, params, provider);
-    return Response.json({ sessionId: session.id, situationId: params.situationId, situationLabel });
+    return Response.json({ sessionId: session.id, situationId: params.situationId, situationLabel, styleId, styleName });
   } catch (err) {
     if (err instanceof AiError) return Response.json({ error: err.message }, { status: 400 });
     throw err;
