@@ -107,7 +107,8 @@ export default function ShortStudio({ short: initial, postId, postTitle, costHin
     [sceneMap, short.assets],
   );
   const timeline = useMemo(() => shortTimeline(sb, assets), [sb, assets]);
-  const ready = !dirty && isShortReady(sb, assets);
+  // text-only edits (hook, end card, captions highlight, YouTube copy) keep all images and voices
+  const ready = isShortReady(sb, assets);
   const inputProps: ShortProps = { storyboard: sb, assets, locale: short.locale, siteHost };
   const statuses = sb.scenes.map((s, i) => sceneStatus(s, assets.scenes[i] ?? emptySceneAssets()));
   const missing = statuses.filter((s) => !s.imageReady).length + statuses.filter((s) => !s.voiceReady).length;
@@ -159,6 +160,7 @@ export default function ShortStudio({ short: initial, postId, postTitle, costHin
   }
 
   async function render() {
+    if (dirty && !(await save())) return;
     setBusy("render");
     setError("");
     setProgress(0);
@@ -321,6 +323,9 @@ export default function ShortStudio({ short: initial, postId, postTitle, costHin
           <div>
             <label className="label" htmlFor="cta">Tekst op de eindkaart</label>
             <input id="cta" className="input" value={sb.cta} onChange={(e) => edit({ ...sb, cta: e.target.value })} />
+            <p className="mt-1 text-xs text-gray-500">
+              Hook, eindkaart, oranje woorden en YouTube-tekst aanpassen kost niets: beelden en stem blijven gewoon staan. Alleen een gewijzigde vertelling of beeldbeschrijving moet opnieuw gemaakt worden.
+            </p>
           </div>
           <div>
             <label className="label" htmlFor="yt-title">YouTube-titel</label>
@@ -391,16 +396,14 @@ export default function ShortStudio({ short: initial, postId, postTitle, costHin
               </div>
             ) : (
               <button type="button" className="btn-primary w-full" disabled={!ready || !canRender || busy !== ""} onClick={render}>
-                ⬇ Download MP4
+                {dirty ? "Opslaan en ⬇ Download MP4" : "⬇ Download MP4"}
               </button>
             )}
             <p className="text-xs text-gray-500">
               {!canRender
                 ? "Je browser kan geen video maken (WebCodecs ontbreekt). Gebruik Chrome."
                 : !ready
-                  ? dirty
-                    ? "Sla je wijzigingen op en maak de beelden en stem."
-                    : "Maak eerst alle beelden en stemmen."
+                  ? "Maak eerst de beelden en stem die nog ontbreken (stap 2)."
                   : "De video wordt op je eigen computer gemaakt; laat dit tabblad open tot hij klaar is."}
             </p>
           </div>
