@@ -60,10 +60,13 @@ async function lockedUntil(key: string): Promise<Date | null> {
   return row?.lockedUntil && row.lockedUntil > new Date() ? row.lockedUntil : null;
 }
 
+/** the database or an open transaction */
+type Executor = Pick<ReturnType<typeof getDb>, "insert">;
+
 /** counts one event in the key's rolling window and returns the count (atomic) */
-async function hit(key: string, windowMs: number): Promise<number> {
+async function hit(key: string, windowMs: number, exec: Executor = getDb()): Promise<number> {
   const expired = sql`${authThrottle.windowStart} < now() - ${windowMs / 1000} * interval '1 second'`;
-  const [row] = await getDb()
+  const [row] = await exec
     .insert(authThrottle)
     .values({ key, failures: 1 })
     .onConflictDoUpdate({
@@ -429,19 +432,36 @@ export type ResendResult =
 export async function resendCode(token: string | undefined): Promise<ResendResult> {
   const row = await findChallenge(token);
   if (!row) return { ok: false, reason: "no_challenge" };
-  const { challenge, user } = row;
+  const { user } = row;
 
   const locked = await lockedUntil(`code:${user.id}`);
   if (locked) return { ok: false, reason: "locked", until: locked };
-  const wait = challenge.lastSentAt.getTime() + RESEND_COOLDOWN_MS - Date.now();
-  if (wait > 0) return { ok: false, reason: "cooldown", seconds: Math.ceil(wait / 1000) };
-  if ((await hit(`mail:${user.id}`, RULES.mail.windowMs)) > RULES.mail.max) return { ok: false, reason: "mail_limit" };
 
-  const code = newCode();
-  await getDb()
-    .update(loginChallenges)
-    .set({ codeHash: codeHash(challenge.id, code), attempts: 0, codeExpiresAt: new Date(Date.now() + CODE_TTL_MS), lastSentAt: new Date() })
-    .where(eq(loginChallenges.id, challenge.id));
+  // Cooldown check, mail-quota reservation and code replacement in one transaction with a row
+  // lock: of two simultaneous clicks only one gets a new code; the other waits for the lock,
+  // then sees the fresh last_sent_at and gets "cooldown". The mail is sent after the commit.
+  const reserved = await getDb().transaction(async (tx) => {
+    const [challenge] = await tx
+      .select()
+      .from(loginChallenges)
+      .where(and(eq(loginChallenges.id, row.challenge.id), gt(loginChallenges.expiresAt, new Date())))
+      .for("update");
+    if (!challenge) return { ok: false as const, reason: "no_challenge" as const };
+    const wait = challenge.lastSentAt.getTime() + RESEND_COOLDOWN_MS - Date.now();
+    if (wait > 0) return { ok: false as const, reason: "cooldown" as const, seconds: Math.ceil(wait / 1000) };
+    if ((await hit(`mail:${user.id}`, RULES.mail.windowMs, tx)) > RULES.mail.max) {
+      return { ok: false as const, reason: "mail_limit" as const };
+    }
+    const code = newCode();
+    await tx
+      .update(loginChallenges)
+      .set({ codeHash: codeHash(challenge.id, code), attempts: 0, codeExpiresAt: new Date(Date.now() + CODE_TTL_MS), lastSentAt: new Date() })
+      .where(eq(loginChallenges.id, challenge.id));
+    return { ok: true as const, code };
+  });
+  if (!reserved.ok) return reserved;
+  const { code } = reserved;
+
   try {
     await sendCodeMail(user, code);
   } catch (err) {
