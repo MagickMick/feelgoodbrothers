@@ -7,7 +7,10 @@
  * Mail code  6 digits, 10 min valid, single use. 3 wrong -> that code is void (send a new one).
  *            10 wrong per account within 1 h -> account locked 1 h.
  *            Max 5 code mails per hour, 1 minute between resends.
- * Devices    "remember this device" skips the code (never the password) for 30 days.
+ * Devices    "remember this device" skips the code (never the password) for 30 days, and the
+ *            account/IP lock: a remembered browser can still log in while someone else locked the
+ *            account. Such a device has its own counter: 5 wrong passwords -> it is forgotten (with
+ *            a warning mail) and the normal rules apply again.
  * Every lock sends a warning mail: an account lock to that account, an IP lock (not tied to one
  * account) to every admin account.
  *
@@ -195,11 +198,64 @@ async function findUserByEmail(email: string): Promise<AdminUser | undefined> {
 // ---------------------------------------------------------------------------
 
 export type PasswordResult =
-  | { ok: true; user: AdminUser }
+  | { ok: true; user: AdminUser; trustedDevice: boolean }
   | { ok: false; reason: "invalid" }
   | { ok: false; reason: "locked"; until: Date };
 
-export async function attemptPassword(email: string, password: string, ip: string): Promise<PasswordResult> {
+/** wrong passwords allowed from a remembered device before it is forgotten */
+export const MAX_DEVICE_FAILURES = 5;
+
+/** the remembered device for this email, if the cookie is valid for that account */
+async function findTrustedDevice(token: string | undefined, email: string): Promise<{ id: string; user: AdminUser } | null> {
+  if (!token) return null;
+  const [row] = await getDb()
+    .select({ id: trustedDevices.id, user: adminUsers })
+    .from(trustedDevices)
+    .innerJoin(adminUsers, eq(adminUsers.id, trustedDevices.userId))
+    .where(
+      and(
+        eq(trustedDevices.id, sha256(token)),
+        eq(adminUsers.email, email.trim().toLowerCase()),
+        gt(trustedDevices.expiresAt, new Date()),
+      ),
+    );
+  return row ?? null;
+}
+
+/**
+ * Password step on a remembered device: the account and IP locks don't apply (someone else may
+ * have caused them), only the device's own counter. 5 wrong -> the device is forgotten.
+ */
+async function attemptPasswordOnDevice(device: { id: string; user: AdminUser }, email: string, password: string, ip: string): Promise<PasswordResult> {
+  const deviceKey = `pw-dev:${device.id}`;
+  const user = await verifyLogin(email, password);
+  if (user) {
+    await clear(deviceKey);
+    await getDb().update(trustedDevices).set({ lastUsedAt: new Date() }).where(eq(trustedDevices.id, device.id));
+    return { ok: true, user, trustedDevice: true };
+  }
+  if ((await hit(deviceKey, RULES.password.windowMs)) >= MAX_DEVICE_FAILURES) {
+    await getDb().delete(trustedDevices).where(eq(trustedDevices.id, device.id));
+    await clear(deviceKey);
+    void sendDeviceForgottenAlert(device.user, ip);
+  }
+  return { ok: false, reason: "invalid" };
+}
+
+async function sendDeviceForgottenAlert(user: AdminUser, ip: string): Promise<void> {
+  const text = `Op een onthouden apparaat is ${MAX_DEVICE_FAILURES} keer een verkeerd wachtwoord ingevuld voor ${user.email}.\n\nDat apparaat wordt daarom niet meer onthouden: bij de volgende login is weer een code per mail nodig.\nIP-adres: ${shownIp(ip)}\n\nWas jij dit niet? Dan heeft iemand toegang tot een browser waarop je ingelogd was. Verander je wachtwoord met create-admin; dat logt je overal uit.`;
+  await sendMail({
+    to: user.email,
+    subject: "Let op: onthouden apparaat vergeten na foute wachtwoorden",
+    text,
+    html: mailLayout("Onthouden apparaat vergeten", text.split("\n").map((l) => `<p>${escapeHtml(l)}</p>`).join("")),
+  }).catch((err) => console.error("[auth] device alert mail failed:", err));
+}
+
+export async function attemptPassword(email: string, password: string, ip: string, deviceToken?: string): Promise<PasswordResult> {
+  const device = await findTrustedDevice(deviceToken, email);
+  if (device) return attemptPasswordOnDevice(device, email, password, ip);
+
   const emailKey = `pw:${email.trim().toLowerCase()}`;
   // per-IP limit only for a real visitor IP, never for a proxy/internal address shared by everyone
   const ipKey = isPublicIp(ip) ? `pw-ip:${ip}` : null;
@@ -213,7 +269,7 @@ export async function attemptPassword(email: string, password: string, ip: strin
       .update(authThrottle)
       .set({ failures: 0, windowStart: new Date() })
       .where(eq(authThrottle.key, emailKey));
-    return { ok: true, user };
+    return { ok: true, user, trustedDevice: false };
   }
 
   let until: Date | null = null;
@@ -406,17 +462,6 @@ export async function createTrustedDevice(userId: number, userAgent: string): Pr
     .insert(trustedDevices)
     .values({ id: sha256(token), userId, userAgent: userAgent.slice(0, 300), expiresAt });
   return { token, expiresAt };
-}
-
-/** true when this browser was remembered for this user (and not expired or revoked) */
-export async function isTrustedDevice(token: string | undefined, userId: number): Promise<boolean> {
-  if (!token) return false;
-  const [row] = await getDb()
-    .update(trustedDevices)
-    .set({ lastUsedAt: new Date() })
-    .where(and(eq(trustedDevices.id, sha256(token)), eq(trustedDevices.userId, userId), gt(trustedDevices.expiresAt, new Date())))
-    .returning({ id: trustedDevices.id });
-  return Boolean(row);
 }
 
 // ---------------------------------------------------------------------------

@@ -5,7 +5,6 @@ import {
   CHALLENGE_COOKIE,
   TRUSTED_COOKIE,
   attemptPassword,
-  isTrustedDevice,
   startChallenge,
   untilText,
 } from "@fgb/core/twofactor";
@@ -28,13 +27,14 @@ if (Astro.request.method === "POST") {
   email = String(form.get("email") ?? "").trim();
   const password = String(form.get("password") ?? "");
 
-  const result = await attemptPassword(email, password, ip);
+  // a remembered device (cookie) skips the mail code and isn't affected by account/IP locks
+  const result = await attemptPassword(email, password, ip, Astro.cookies.get(TRUSTED_COOKIE)?.value);
   if (!result.ok) {
     error =
       result.reason === "locked"
         ? `Te veel pogingen. Probeer het ${untilText(result.until)} opnieuw.`
         : "E-mail of wachtwoord klopt niet.";
-  } else if (await isTrustedDevice(Astro.cookies.get(TRUSTED_COOKIE)?.value, result.user.id)) {
+  } else if (result.trustedDevice) {
     // remembered device: password is enough
     const { token, expiresAt } = await createSession(result.user.id);
     Astro.cookies.set(SESSION_COOKIE, token, {
