@@ -160,12 +160,13 @@ const button =
     stopReadTracking?.();
     stopReadTracking = null;
     const el = document.querySelector<HTMLElement>("[data-analytics-post]");
-    if (!el) return;
+    if (!el || el.dataset.analyticsReadTracked) return;
     let ticking = false;
     const check = () => {
       ticking = false;
       const r = el.getBoundingClientRect();
-      if (r.height > 0 && window.innerHeight - r.top >= r.height * 0.75 && active()) {
+      if (r.height > 0 && window.innerHeight - r.top >= r.height * 0.75 && active() && !el.dataset.analyticsReadTracked) {
+        el.dataset.analyticsReadTracked = "true";
         track("blog_read");
         stop();
       }
