@@ -70,7 +70,6 @@ Per scene:
 - imagePrompt: a concrete visual description of ONE illustration for this moment (setting, what the character does, body language, light). Never ask for text in the image. Do not describe the art style (that is added automatically).
 - motion: one of ${MOTIONS.join(", ")} (camera movement over the illustration).
 - effect: one of ${EFFECTS.join(", ")}. heartbeat = racing heart/panic peak, tunnel = tunnel vision or derealization, rain = rain or heavy mood, particles = calm or dreamy, breathe = breathing to calm down, none = otherwise. Use effects sparingly.
-- emphasis: 1 to 3 key words from that narration that light up in the captions.
 
 Also:
 - hook: max 8 words, shown big over the first scene, makes people stay.
@@ -81,7 +80,7 @@ Also:
 - youtube.hashtags: 5 to 8 relevant hashtags without the # sign.
 
 Answer with only one JSON object, no text around it:
-{"hook": "...", "character": "...", "scenes": [{"narration": "...", "imagePrompt": "...", "motion": "zoom-in", "effect": "none", "emphasis": ["..."]}], "cta": "...", "youtube": {"title": "...", "description": "...", "hashtags": ["..."]}}`;
+{"hook": "...", "character": "...", "scenes": [{"narration": "...", "imagePrompt": "...", "motion": "zoom-in", "effect": "none"}], "cta": "...", "youtube": {"title": "...", "description": "...", "hashtags": ["..."]}}`;
 }
 
 function trimWords(text: string, max: number): string {
@@ -96,7 +95,6 @@ function mockStoryboard(locale: Locale, title: string): Storyboard {
     imagePrompt: `Test scene ${i}: a person in a busy place`,
     motion,
     effect,
-    emphasis: [nl ? "hart" : "heart"],
   });
   return normalizeStoryboard({
     hook: `Test: ${title}`.slice(0, 60),

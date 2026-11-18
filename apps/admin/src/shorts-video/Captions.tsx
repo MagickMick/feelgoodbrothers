@@ -1,11 +1,9 @@
-/** Big word-by-word captions: 2-4 words at a time, the spoken word and key words in brand orange. */
+/** Big word-by-word captions: 2-4 words at a time, the spoken word in brand orange. */
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Word } from "@fgb/core/shorts/types";
 
 const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 const BRAND = "#f97316";
-
-const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
 /** split the words into short caption chunks, breaking after punctuation */
 export function chunkWords(words: Word[], max = 4): Word[][] {
@@ -22,7 +20,7 @@ export function chunkWords(words: Word[], max = 4): Word[][] {
   return chunks;
 }
 
-export function Captions({ words, emphasis }: { words: Word[]; emphasis: string[] }) {
+export function Captions({ words }: { words: Word[] }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = frame / fps;
@@ -33,7 +31,6 @@ export function Captions({ words, emphasis }: { words: Word[]; emphasis: string[
   const chunk = chunks[index];
   const shownAt = Math.round(chunk[0].start * fps);
   const pop = spring({ frame: frame - shownAt, fps, config: { damping: 13, stiffness: 180 } });
-  const keys = new Set(emphasis.flatMap((e) => e.split(/\s+/)).map(norm));
 
   return (
     <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 380 }}>
@@ -49,7 +46,6 @@ export function Captions({ words, emphasis }: { words: Word[]; emphasis: string[
       >
         {chunk.map((w, i) => {
           const active = t >= w.start && t < w.end + 0.05;
-          const key = keys.has(norm(w.w));
           return (
             <span
               key={i}
@@ -59,7 +55,7 @@ export function Captions({ words, emphasis }: { words: Word[]; emphasis: string[
                 fontSize: 88,
                 lineHeight: 1.15,
                 margin: "0 14px",
-                color: active || key ? BRAND : "#ffffff",
+                color: active ? BRAND : "#ffffff",
                 WebkitTextStroke: "3px rgba(0,0,0,0.55)",
                 paintOrder: "stroke fill",
                 textShadow: "0 6px 18px rgba(0,0,0,0.55)",

@@ -115,7 +115,7 @@ function SceneView({
       <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.55) 100%)" }} />
       <Effect effect={scene.effect} frames={frames} />
       {audioUrl && <Audio src={audioUrl} />}
-      <Captions words={words} emphasis={scene.emphasis} />
+      <Captions words={words} />
       {index === 0 && hook && (
         <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", paddingTop: 260 }}>
           <div

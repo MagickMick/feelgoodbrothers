@@ -24,7 +24,6 @@ export interface ShortScene {
   imagePrompt: string;
   motion: Motion;
   effect: Effect;
-  emphasis: string[];
 }
 
 export interface Storyboard {
@@ -138,7 +137,6 @@ export function normalizeStoryboard(raw: unknown, opts: { strict?: boolean } = {
         imagePrompt: clean(s.imagePrompt, 600),
         motion,
         effect,
-        emphasis: (Array.isArray(s.emphasis) ? s.emphasis : []).map((e) => clean(e, 40)).filter(Boolean).slice(0, 4),
       };
     })
     .filter((s) => s.narration && s.imagePrompt)

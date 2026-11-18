@@ -274,20 +274,13 @@ export default function ShortStudio({ short: initial, postId, postTitle, costHin
                     <label className="label" htmlFor={`p${i}`}>Beeldbeschrijving (Engels)</label>
                     <textarea id={`p${i}`} className="input text-sm" rows={2} value={scene.imagePrompt} onChange={(e) => editScene(i, { imagePrompt: e.target.value })} />
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <select className="input text-sm" value={scene.motion} onChange={(e) => editScene(i, { motion: e.target.value as ShortScene["motion"] })} aria-label="Beweging">
                       {MOTIONS.map((m) => <option key={m} value={m}>{MOTION_LABELS[m]}</option>)}
                     </select>
                     <select className="input text-sm" value={scene.effect} onChange={(e) => editScene(i, { effect: e.target.value as ShortScene["effect"] })} aria-label="Effect">
                       {EFFECTS.map((m) => <option key={m} value={m}>{EFFECT_LABELS[m]}</option>)}
                     </select>
-                    <input
-                      className="input text-sm"
-                      placeholder="Oranje woorden"
-                      aria-label="Oranje woorden"
-                      value={scene.emphasis.join(",")}
-                      onChange={(e) => editScene(i, { emphasis: e.target.value.split(",") })}
-                    />
                   </div>
                   <div className="flex flex-wrap gap-3 text-sm">
                     <button type="button" className="text-brand-700 hover:underline disabled:text-gray-400" disabled={busy !== ""}
@@ -311,7 +304,7 @@ export default function ShortStudio({ short: initial, postId, postTitle, costHin
             disabled={busy !== ""}
             onClick={() => {
               setSceneMap((m) => [...m, -1]);
-              edit({ ...sb, scenes: [...sb.scenes, { narration: "", imagePrompt: "", motion: "zoom-in", effect: "none", emphasis: [] }] });
+              edit({ ...sb, scenes: [...sb.scenes, { narration: "", imagePrompt: "", motion: "zoom-in", effect: "none" }] });
             }}
           >
             + Scène toevoegen
@@ -324,7 +317,7 @@ export default function ShortStudio({ short: initial, postId, postTitle, costHin
             <label className="label" htmlFor="cta">Tekst op de eindkaart</label>
             <input id="cta" className="input" value={sb.cta} onChange={(e) => edit({ ...sb, cta: e.target.value })} />
             <p className="mt-1 text-xs text-gray-500">
-              Hook, eindkaart, oranje woorden en YouTube-tekst aanpassen kost niets: beelden en stem blijven gewoon staan. Alleen een gewijzigde vertelling of beeldbeschrijving moet opnieuw gemaakt worden.
+              Hook, eindkaart en YouTube-tekst aanpassen kost niets: beelden en stem blijven gewoon staan. Alleen een gewijzigde vertelling of beeldbeschrijving moet opnieuw gemaakt worden.
             </p>
           </div>
           <div>
