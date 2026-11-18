@@ -74,7 +74,7 @@ Per scene:
 Also:
 - hook: max 8 words, shown big over the first scene, makes people stay.
 - character: one fixed English description of the main character (age range, build, hair, clothes) so every illustration shows the same person. Faceless style.
-- cta: one short line inviting to read the full story on feelgoodbrothers.com.
+- cta: max 6 words inviting to read the whole story, like "Read the full story". Do not mention the website or any URL: the end card already shows the address on a button below it.
 - youtube.title: max 70 characters, honest and curiosity-making, may include one emoji, ends with #shorts.
 - youtube.description: 2 or 3 sentences about the story, then a line inviting to read the full story (the link is added automatically), then the line "${locale === "nl" ? "Illustraties en stem gemaakt met AI. Dit is een persoonlijke ervaring, geen medisch advies." : "Illustrations and voice made with AI. This is a personal experience, not medical advice."}"
 - youtube.hashtags: 5 to 8 relevant hashtags without the # sign.
@@ -100,7 +100,7 @@ function mockStoryboard(locale: Locale, title: string): Storyboard {
     hook: `Test: ${title}`.slice(0, 60),
     character: "man in his thirties, short dark hair, dark green hoodie",
     scenes: [scene(1, "none", "zoom-in"), scene(2, "heartbeat", "pan-left"), scene(3, "tunnel", "zoom-out"), scene(4, "breathe", "float")],
-    cta: nl ? "Lees het hele verhaal op feelgoodbrothers.com" : "Read the full story on feelgoodbrothers.com",
+    cta: nl ? "Lees het hele verhaal" : "Read the full story",
     youtube: {
       title: `${title} #shorts`.slice(0, 100),
       description: nl ? "Testbeschrijving." : "Test description.",

@@ -140,6 +140,16 @@ function SceneView({
   );
 }
 
+/**
+ * The address is already on the button: drop it from the end of the title, so older
+ * scripts ("Read the full story on feelgoodbrothers.com") don't show it twice.
+ */
+export function endCardTitle(cta: string, siteHost: string, locale: "en" | "nl"): string {
+  const host = siteHost.replace(/^www\./, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const title = cta.replace(new RegExp(`\\s*(?:\\b(?:on|at|via|op|bij)\\s+)?(?:https?://)?(?:www\\.)?${host}/?[.!]?\\s*$`, "i"), "").trim();
+  return title || (locale === "nl" ? "Lees het hele verhaal" : "Read the full story");
+}
+
 function EndCard({ cta, siteHost, locale }: { cta: string; siteHost: string; locale: "en" | "nl" }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -150,7 +160,7 @@ function EndCard({ cta, siteHost, locale }: { cta: string; siteHost: string; loc
       <AbsoluteFill style={{ background: "radial-gradient(circle, rgba(249,115,22,0.18) 0%, rgba(249,115,22,0) 60%)" }} />
       <div style={{ textAlign: "center", padding: "0 80px", transform: `scale(${interpolate(pop, [0, 1], [0.85, 1])})`, opacity: pop }}>
         <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: 6, textTransform: "uppercase", color: BRAND }}>Feelgood Brothers</div>
-        <div style={{ marginTop: 50, fontSize: 70, fontWeight: 800, lineHeight: 1.15, color: INK }}>{cta}</div>
+        <div style={{ marginTop: 50, fontSize: 70, fontWeight: 800, lineHeight: 1.15, color: INK }}>{endCardTitle(cta, siteHost, locale)}</div>
         <div
           style={{
             marginTop: 70,
