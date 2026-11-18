@@ -296,6 +296,8 @@ export async function rewriteScript(id: number): Promise<Short> {
   await withClaim(id, async ({ short }, save) => {
     const [post] = await getDb().select().from(posts).where(eq(posts.id, short.postId));
     if (!post) throw new AiError("Blog niet gevonden");
+    if (post.body.split(/\s+/).length < 80) throw new AiError("De blog is te kort voor een short.");
+    if (/\[\[[^\]]*\]\]/.test(post.body)) throw new AiError("Er staan nog invulpunten [[…]] in de blog. Vul die eerst in.");
     const storyboard = await writeScript(post);
     await save({ storyboard, assets: alignAssets(storyboard, null), error: null });
     await deleteSceneFiles(short.assets.scenes);
