@@ -26,6 +26,17 @@ export const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 export const BRAND = "#f97316";
 export const CREAM = "#fdf6ec";
 export const INK = "#2b2118";
+/** the orange dotted "F" (same file as the website favicon), served from apps/admin/public */
+export const LOGO_SRC = "/brand/fgb-logo-f.png";
+
+/** the "F" logo, always in the bottom-left corner (below the captions) */
+function Logo({ base }: { base: string }) {
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      <Img src={`${base}${LOGO_SRC}`} style={{ position: "absolute", left: 56, bottom: 64, width: 104, height: 130, opacity: 0.95 }} />
+    </AbsoluteFill>
+  );
+}
 
 function SceneView({
   scene,
@@ -198,6 +209,7 @@ export function Short({ storyboard, assets, locale, siteHost, mediaBase = "" }: 
       <Sequence from={timeline.endCardStart} durationInFrames={timeline.endCardFrames}>
         <EndCard cta={storyboard.cta} siteHost={siteHost} locale={locale} />
       </Sequence>
+      <Logo base={mediaBase} />
     </AbsoluteFill>
   );
 }
