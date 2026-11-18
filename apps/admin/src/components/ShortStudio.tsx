@@ -195,7 +195,7 @@ export default function ShortStudio({ short: initial, postId, postTitle, costHin
 
   return (
     <div className="grid gap-6 lg:grid-cols-5">
-      <div className="space-y-4 lg:col-span-3">
+      <div className="space-y-4 lg:col-span-3" inert={busy !== ""}>
         {mock && (
           <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
             Testmodus: geen OpenAI-key of AI_PROVIDER=mock. Je krijgt een vast testscript, gekleurde vlakken en stille audio.
