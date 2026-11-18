@@ -210,7 +210,13 @@ const bio = author ? (currLocale === "nl" ? author.bioNl : author.bioEn) : "";
             )
           }
           {audio && <AudioPlayer src={audio.url} seconds={audio.seconds} />}
-          <section id="blog-post-content" class="prose mx-auto md:text-lg" set:html={html} />
+          <section
+            id="blog-post-content"
+            class="prose mx-auto md:text-lg"
+            data-analytics-post={post.slug}
+            data-analytics-locale={post.locale}
+            set:html={html}
+          />
 
           <!-- disclaimer + helplines (E-E-A-T / YMYL) -->
           <aside class="mt-12 rounded-xl border border-primary-300 bg-primary-100/40 p-5 text-sm md:text-base">

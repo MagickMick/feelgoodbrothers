@@ -90,10 +90,13 @@ const total = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0
     };
 
     toggle.addEventListener("click", () => {
-      if (audio.paused) void audio.play();
+      // play() rejects with AbortError when pause() follows quickly: harmless, the icons follow the events
+      if (audio.paused) audio.play().catch((err: unknown) => { if ((err as Error).name !== "AbortError") console.error(err); });
       else audio.pause();
     });
     audio.addEventListener("play", render);
+    // analytics (only sent with cookie consent): the first play of this player
+    audio.addEventListener("play", () => window.dispatchEvent(new CustomEvent("fgb:track", { detail: { name: "audio_play" } })), { once: true });
     audio.addEventListener("pause", render);
     audio.addEventListener("ended", () => {
       audio.currentTime = 0;
