@@ -317,7 +317,7 @@ export async function generatePostAudio(postId: number): Promise<{ key: string; 
 
     const key = `audio-${post.id}-${randomBytes(4).toString("hex")}`;
     await writeFile(audioFile(key), data);
-    await db
+    const saved = await db
       .update(posts)
       .set({
         audioKey: key,
@@ -327,7 +327,13 @@ export async function generatePostAudio(postId: number): Promise<{ key: string; 
         audioCreatedAt: new Date(),
         audioBusySince: null,
       })
-      .where(eq(posts.id, postId));
+      .where(eq(posts.id, postId))
+      .returning({ id: posts.id });
+    if (saved.length === 0) {
+      // the post was deleted meanwhile (only possible after the lock went stale): don't leave the file behind
+      await deleteAudioFile(key);
+      throw new AiError("Post niet gevonden");
+    }
     await deleteAudioFile(post.audioKey);
 
     // the TTS endpoint reports no token usage: store an estimate (text ~4 chars per token,
@@ -352,11 +358,16 @@ export async function generatePostAudio(postId: number): Promise<{ key: string; 
   }
 }
 
+/** true while a voice-over job holds the lock (a lock older than BUSY_MS is stale) */
+export function audioBusy(since: Date | null): boolean {
+  return Boolean(since && since.getTime() > Date.now() - BUSY_MS);
+}
+
 export async function removePostAudio(postId: number): Promise<void> {
   const db = getDb();
   const [post] = await db.select().from(posts).where(eq(posts.id, postId));
   if (!post) return;
-  if (post.audioBusySince && post.audioBusySince.getTime() > Date.now() - BUSY_MS) {
+  if (audioBusy(post.audioBusySince)) {
     throw new AiError("Er wordt nu een voorlezing gemaakt. Wacht tot die klaar is.");
   }
   await db
