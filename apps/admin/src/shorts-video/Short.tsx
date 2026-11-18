@@ -8,7 +8,7 @@
  */
 import { AbsoluteFill, Img, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { Audio } from "@remotion/media";
-import { HOOK_SECONDS, shortTimeline, type ShortAssets, type ShortScene, type Storyboard, type Word } from "@fgb/core/shorts/types";
+import { DEFAULT_CTA, HOOK_SECONDS, shortTimeline, type ShortAssets, type ShortScene, type Storyboard, type Word } from "@fgb/core/shorts/types";
 import { Effect } from "./Effects";
 import { Captions } from "./Captions";
 
@@ -143,11 +143,12 @@ function SceneView({
 /**
  * The address is already on the button: drop it from the end of the title, so older
  * scripts ("Read the full story on feelgoodbrothers.com") don't show it twice.
+ * "on"/"op" stays, so title and button read as one sentence.
  */
 export function endCardTitle(cta: string, siteHost: string, locale: "en" | "nl"): string {
   const host = siteHost.replace(/^www\./, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const title = cta.replace(new RegExp(`\\s*(?:\\b(?:on|at|via|op|bij)\\s+)?(?:https?://)?(?:www\\.)?${host}/?[.!]?\\s*$`, "i"), "").trim();
-  return title || (locale === "nl" ? "Lees het hele verhaal" : "Read the full story");
+  const title = cta.replace(new RegExp(`\\s*(?:https?://)?(?:www\\.)?${host}/?[.!]?\\s*$`, "i"), "").trim();
+  return title || DEFAULT_CTA[locale];
 }
 
 function EndCard({ cta, siteHost, locale }: { cta: string; siteHost: string; locale: "en" | "nl" }) {

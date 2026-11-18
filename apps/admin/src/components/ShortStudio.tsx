@@ -314,7 +314,7 @@ export default function ShortStudio({ short: initial, postId, postTitle, costHin
         <div className="card space-y-3">
           <h2 className="font-semibold">Eindkaart en YouTube</h2>
           <div>
-            <label className="label" htmlFor="cta">Tekst op de eindkaart</label>
+            <label className="label" htmlFor="cta">Tekst op de eindkaart <span className="font-normal text-gray-500">(het webadres staat er al onder, op de oranje knop)</span></label>
             <input id="cta" className="input" value={sb.cta} onChange={(e) => edit({ ...sb, cta: e.target.value })} />
             <p className="mt-1 text-xs text-gray-500">
               Hook, eindkaart en YouTube-tekst aanpassen kost niets: beelden en stem blijven gewoon staan. Alleen een gewijzigde vertelling of beeldbeschrijving moet opnieuw gemaakt worden.

@@ -22,6 +22,7 @@ import { AiError, defaultProvider, streamChat } from "../ai/provider.ts";
 import { deleteAudioFile, mapLimit, mp3Frames, silentMp3, speechConfig, ttsChunk } from "../ai/speech.ts";
 import {
   alignAssets,
+  DEFAULT_CTA,
   emptySceneAssets,
   estimateWords,
   MOTIONS,
@@ -56,7 +57,7 @@ function scriptSystem(locale: Locale): string {
   const lang = locale === "nl" ? "Dutch (natural, informal)" : "American English";
   return `You turn a personal mental health blog post into a storyboard for a 30 to 45 second vertical animated short (YouTube Shorts / Reels) for Feelgood Brothers.
 
-Write all viewer-facing text (hook, narration, cta, youtube) in ${lang}. Write "character" and every "imagePrompt" in English.
+Write all viewer-facing text (hook, narration, youtube) in ${lang}. Write "character" and every "imagePrompt" in English.
 
 The short:
 - Is told in the first person by the author ("I"), as a condensed, honest version of the story. Keep the author's real situation and details; do not invent new events.
@@ -74,13 +75,12 @@ Per scene:
 Also:
 - hook: max 8 words, shown big over the first scene, makes people stay.
 - character: one fixed English description of the main character (age range, build, hair, clothes) so every illustration shows the same person. Faceless style.
-- cta: max 6 words inviting to read the whole story, like "Read the full story". Do not mention the website or any URL: the end card already shows the address on a button below it.
 - youtube.title: max 70 characters, honest and curiosity-making, may include one emoji, ends with #shorts.
 - youtube.description: 2 or 3 sentences about the story, then a line inviting to read the full story (the link is added automatically), then the line "${locale === "nl" ? "Illustraties en stem gemaakt met AI. Dit is een persoonlijke ervaring, geen medisch advies." : "Illustrations and voice made with AI. This is a personal experience, not medical advice."}"
 - youtube.hashtags: 5 to 8 relevant hashtags without the # sign.
 
 Answer with only one JSON object, no text around it:
-{"hook": "...", "character": "...", "scenes": [{"narration": "...", "imagePrompt": "...", "motion": "zoom-in", "effect": "none"}], "cta": "...", "youtube": {"title": "...", "description": "...", "hashtags": ["..."]}}`;
+{"hook": "...", "character": "...", "scenes": [{"narration": "...", "imagePrompt": "...", "motion": "zoom-in", "effect": "none"}], "youtube": {"title": "...", "description": "...", "hashtags": ["..."]}}`;
 }
 
 function trimWords(text: string, max: number): string {
@@ -100,7 +100,7 @@ function mockStoryboard(locale: Locale, title: string): Storyboard {
     hook: `Test: ${title}`.slice(0, 60),
     character: "man in his thirties, short dark hair, dark green hoodie",
     scenes: [scene(1, "none", "zoom-in"), scene(2, "heartbeat", "pan-left"), scene(3, "tunnel", "zoom-out"), scene(4, "breathe", "float")],
-    cta: nl ? "Lees het hele verhaal" : "Read the full story",
+    cta: "",
     youtube: {
       title: `${title} #shorts`.slice(0, 100),
       description: nl ? "Testbeschrijving." : "Test description.",
@@ -125,7 +125,9 @@ export function shortSiteHost(): string {
   return new URL(shortSiteUrl()).host.replace(/^www\./, "");
 }
 
-function withLink(sb: Storyboard, post: { locale: Locale; slug: string }): Storyboard {
+/** fixed end-card title (editable afterwards) and the blog link in the YouTube description */
+function withLink(raw: Storyboard, post: { locale: Locale; slug: string }): Storyboard {
+  const sb = { ...raw, cta: DEFAULT_CTA[post.locale] };
   const url = `${shortSiteUrl()}${postPath(post.locale, post.slug)}?utm_source=youtube&utm_medium=shorts`;
   if (sb.youtube.description.includes(url)) return sb;
   const label = post.locale === "nl" ? "Lees het hele verhaal:" : "Read the full story:";

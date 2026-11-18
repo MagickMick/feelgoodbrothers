@@ -19,6 +19,12 @@ export const END_CARD_SECONDS = 3;
 /** the hook is shown over the first scene for this long */
 export const HOOK_SECONDS = 2.4;
 
+/** end-card title; the button with the web address follows it, so it reads as one sentence */
+export const DEFAULT_CTA: Record<"en" | "nl", string> = {
+  en: "Read the full story on",
+  nl: "Lees het hele verhaal op",
+};
+
 export interface ShortScene {
   narration: string;
   imagePrompt: string;
