@@ -1,0 +1,47 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { listShorts } from "@fgb/core/shorts";
+import { isShortReady } from "@fgb/core/shorts/types";
+import { formatDateTime } from "@fgb/core/time";
+
+const rows = await listShorts();
+---
+
+<AdminLayout title="Shorts">
+  <h1 class="mb-2 text-2xl font-semibold">🎬 Shorts</h1>
+  <p class="mb-6 max-w-3xl text-sm text-gray-600">
+    Korte verticale animatievideo's van je blogs, voor YouTube Shorts en Reels. Een nieuwe short maak je vanuit de editor van een blog, met de knop "Maak short".
+  </p>
+  {
+    rows.length === 0 ? (
+      <p class="card text-sm text-gray-500">Nog geen shorts. Open een blog en klik op "🎬 Maak short".</p>
+    ) : (
+      <div class="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <table class="min-w-full divide-y divide-gray-100 text-sm">
+          <tbody class="divide-y divide-gray-100">
+            {rows.map(({ short, title }) => (
+              <tr>
+                <td class="px-4 py-2">
+                  {short.locale === "nl" ? "🇳🇱" : "🇺🇸"} <a href={`/shorts/${short.id}/`} class="hover:text-brand-600">{short.storyboard.hook || title}</a>
+                  <span class="block text-xs text-gray-500">{title}</span>
+                </td>
+                <td class="px-4 py-2 text-gray-500">{short.storyboard.scenes.length} scènes</td>
+                <td class="px-4 py-2">
+                  {isShortReady(short.storyboard, short.assets) ? (
+                    <span class="badge bg-green-100 text-green-800">klaar</span>
+                  ) : (
+                    <span class="badge bg-amber-100 text-amber-800">nog maken</span>
+                  )}
+                </td>
+                <td class="px-4 py-2 text-gray-500">{formatDateTime(short.updatedAt)}</td>
+                <td class="px-4 py-2 text-right">
+                  <a href={`/shorts/${short.id}/`} class="text-brand-600 hover:underline">Open →</a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+</AdminLayout>

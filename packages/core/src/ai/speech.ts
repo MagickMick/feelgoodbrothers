@@ -208,7 +208,7 @@ export function silentMp3(seconds: number): Uint8Array {
   return out;
 }
 
-function concat(parts: Uint8Array[]): Uint8Array {
+export function concat(parts: Uint8Array[]): Uint8Array {
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let at = 0;
   for (const p of parts) {
@@ -221,7 +221,7 @@ function concat(parts: Uint8Array[]): Uint8Array {
 // ---------------------------------------------------------------------------
 // generation
 // ---------------------------------------------------------------------------
-async function ttsChunk(text: string, locale: Locale, model: string, voice: string): Promise<Uint8Array> {
+export async function ttsChunk(text: string, locale: Locale, model: string, voice: string): Promise<Uint8Array> {
   const { default: OpenAI } = await import("openai");
   const client = new OpenAI();
   try {
@@ -243,7 +243,7 @@ async function ttsChunk(text: string, locale: Locale, model: string, voice: stri
 }
 
 /** run `fn` over items with at most `limit` at the same time, keeping the order */
-async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+export async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const results = new Array<R>(items.length);
   let next = 0;
   let failed = false;
@@ -317,7 +317,7 @@ export async function generatePostAudio(postId: number): Promise<{ key: string; 
 
     const key = `audio-${post.id}-${randomBytes(4).toString("hex")}`;
     await writeFile(audioFile(key), data);
-    await db
+    const saved = await db
       .update(posts)
       .set({
         audioKey: key,
@@ -327,7 +327,13 @@ export async function generatePostAudio(postId: number): Promise<{ key: string; 
         audioCreatedAt: new Date(),
         audioBusySince: null,
       })
-      .where(eq(posts.id, postId));
+      .where(eq(posts.id, postId))
+      .returning({ id: posts.id });
+    if (saved.length === 0) {
+      // the post was deleted meanwhile (only possible after the lock went stale): don't leave the file behind
+      await deleteAudioFile(key);
+      throw new AiError("Post niet gevonden");
+    }
     await deleteAudioFile(post.audioKey);
 
     // the TTS endpoint reports no token usage: store an estimate (text ~4 chars per token,
@@ -352,11 +358,16 @@ export async function generatePostAudio(postId: number): Promise<{ key: string; 
   }
 }
 
+/** true while a voice-over job holds the lock (a lock older than BUSY_MS is stale) */
+export function audioBusy(since: Date | null): boolean {
+  return Boolean(since && since.getTime() > Date.now() - BUSY_MS);
+}
+
 export async function removePostAudio(postId: number): Promise<void> {
   const db = getDb();
   const [post] = await db.select().from(posts).where(eq(posts.id, postId));
   if (!post) return;
-  if (post.audioBusySince && post.audioBusySince.getTime() > Date.now() - BUSY_MS) {
+  if (audioBusy(post.audioBusySince)) {
     throw new AiError("Er wordt nu een voorlezing gemaakt. Wacht tot die klaar is.");
   }
   await db

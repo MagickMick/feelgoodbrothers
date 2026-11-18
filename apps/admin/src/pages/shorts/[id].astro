@@ -1,0 +1,26 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import ShortStudio from "@/components/ShortStudio";
+import { getShort, shortCostHint, shortSiteHost, shortsMockMode } from "@fgb/core/shorts";
+import { getPostById } from "@fgb/core/posts";
+
+const short = await getShort(Number(Astro.params.id));
+if (!short) return Astro.redirect("/shorts/");
+const post = await getPostById(short.postId);
+if (!post) return Astro.redirect("/shorts/");
+const siteHost = shortSiteHost();
+---
+
+<AdminLayout title={`Short: ${post.title}`} wide>
+  <a href="/shorts/" class="text-sm text-gray-500 hover:text-gray-800">← Alle shorts</a>
+  <h1 class="mb-6 mt-1 text-2xl font-semibold">🎬 Short <span class="font-normal text-gray-500">· {post.locale === "nl" ? "🇳🇱" : "🇺🇸"} {post.title}</span></h1>
+  <ShortStudio
+    client:only="react"
+    short={{ id: short.id, locale: short.locale, storyboard: short.storyboard, assets: short.assets, error: short.error }}
+    postId={post.id}
+    postTitle={post.title}
+    costHint={shortCostHint(short.storyboard.scenes.length)}
+    mock={shortsMockMode()}
+    siteHost={siteHost}
+  />
+</AdminLayout>
