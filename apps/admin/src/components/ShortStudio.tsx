@@ -341,7 +341,7 @@ export default function ShortStudio({ short: initial, postId, postTitle, costHin
               id="yt-tags"
               className="input"
               value={yt.hashtags.join(" ")}
-              onChange={(e) => edit({ ...sb, youtube: { ...yt, hashtags: e.target.value.split(/\s+/).filter(Boolean) } })}
+              onChange={(e) => edit({ ...sb, youtube: { ...yt, hashtags: e.target.value.split(/\s+/) } })}
             />
           </div>
         </div>
