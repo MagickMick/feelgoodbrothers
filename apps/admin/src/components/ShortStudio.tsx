@@ -285,8 +285,8 @@ export default function ShortStudio({ short: initial, postId, postTitle, costHin
                       className="input text-sm"
                       placeholder="Oranje woorden"
                       aria-label="Oranje woorden"
-                      value={scene.emphasis.join(", ")}
-                      onChange={(e) => editScene(i, { emphasis: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })}
+                      value={scene.emphasis.join(",")}
+                      onChange={(e) => editScene(i, { emphasis: e.target.value.split(",") })}
                     />
                   </div>
                   <div className="flex flex-wrap gap-3 text-sm">
