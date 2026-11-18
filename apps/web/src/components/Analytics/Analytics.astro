@@ -105,6 +105,9 @@ const button =
       analytics_storage: "denied",
     });
     gtag("consent", "update", { analytics_storage: "granted" });
+    // page views are sent by pageView(); the Google tag ignores send_page_view in "config"
+    // alone (it then sends its own page_view too, so every view counted twice)
+    gtag("set", { send_page_view: false });
     gtag("js", new Date());
     gtag("config", id, {
       send_page_view: false,
