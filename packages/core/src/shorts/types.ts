@@ -126,8 +126,13 @@ export function normalizeStoryboard(raw: unknown, opts: { strict?: boolean } = {
   if (opts.strict) {
     // editor saves: never drop a scene silently (its assets are matched by position)
     if (scenesRaw.length > MAX_SCENES) throw new Error(`Maximaal ${MAX_SCENES} scènes.`);
+    if (clean(r.character, 301).length > 300) throw new Error("Hoofdpersoon: maximaal 300 tekens.");
+    if (clean(r.cta, 121).length > 120) throw new Error("Tekst op de eindkaart: maximaal 120 tekens.");
     scenesRaw.forEach((x, i) => {
       const s = (x ?? {}) as Record<string, unknown>;
+      if (clean(s.narration, 401).length > 400 || clean(s.imagePrompt, 601).length > 600) {
+        throw new Error(`Scène ${i + 1}: maximaal 400 tekens voor de stemtekst en 600 tekens voor de beeldbeschrijving.`);
+      }
       if (!clean(s.narration, 400) || !clean(s.imagePrompt, 600)) {
         throw new Error(`Vul bij scène ${i + 1} zowel de tekst voor de stem als de beeldbeschrijving in.`);
       }
