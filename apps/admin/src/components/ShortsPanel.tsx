@@ -24,7 +24,7 @@ export default function ShortsPanel({ postId, shorts, dirty, placeholdersOpen }:
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error ?? "Er ging iets mis");
-      window.onbeforeunload = null;
+      setBusy(false);
       window.location.href = `/shorts/${json.id}/`;
     } catch (err) {
       setError((err as Error).message);
