@@ -192,15 +192,25 @@ export async function createShort(postId: number): Promise<number> {
   return row.id;
 }
 
+/**
+ * A claim on a short for AI work. `token` is the exact lock time written by this job, so
+ * the job only ever saves to or unlocks the short while the lock is still its own: once a
+ * lock went stale and another request took it over, this job's writes match nothing.
+ */
+interface Claim {
+  short: Short;
+  token: Date;
+}
+
 /** claim the short for AI work; throws when another job runs */
-async function claim(id: number): Promise<Short> {
-  const db = getDb();
-  const [row] = await db
+async function claim(id: number): Promise<Claim> {
+  const token = new Date();
+  const [row] = await getDb()
     .update(shorts)
-    .set({ busySince: new Date() })
+    .set({ busySince: token })
     .where(and(eq(shorts.id, id), or(isNull(shorts.busySince), lt(shorts.busySince, new Date(Date.now() - BUSY_MS)))))
     .returning();
-  if (row) return row;
+  if (row) return { short: row, token };
   if (!(await getShort(id))) throw new AiError("Short niet gevonden");
   throw new AiError("Er wordt al aan deze short gewerkt. Wacht tot dat klaar is.");
 }
@@ -210,14 +220,41 @@ export function shortBusy(since: Date | null): boolean {
   return Boolean(since && since.getTime() > Date.now() - BUSY_MS);
 }
 
-/** clears the lock (and saves `fields`); false when the short no longer exists */
-async function release(id: number, fields: Partial<typeof shorts.$inferInsert> = {}): Promise<boolean> {
+/**
+ * Saves `fields` and clears the lock, but only while the lock is still this claim's.
+ * False when the short was deleted or another request took the (stale) lock over.
+ */
+async function release(id: number, token: Date, fields: Partial<typeof shorts.$inferInsert> = {}): Promise<boolean> {
   const rows = await getDb()
     .update(shorts)
     .set({ ...fields, busySince: null, updatedAt: new Date() })
-    .where(eq(shorts.id, id))
+    .where(and(eq(shorts.id, id), eq(shorts.busySince, token)))
     .returning({ id: shorts.id });
   return rows.length > 0;
+}
+
+/**
+ * Runs `work` under a claim and releases exactly once: `work` saves its result through the
+ * `save` callback it gets (which releases); when it throws before that, the lock is
+ * released without changes. Throws when the claim was lost before saving.
+ */
+async function withClaim<T>(
+  id: number,
+  work: (claim: Claim, save: (fields: Partial<typeof shorts.$inferInsert>) => Promise<void>) => Promise<T>,
+): Promise<T> {
+  const c = await claim(id);
+  let released = false;
+  const save = async (fields: Partial<typeof shorts.$inferInsert>) => {
+    released = true;
+    if (!(await release(id, c.token, fields))) {
+      throw new AiError((await getShort(id)) ? "Deze short is intussen door een ander verzoek overgenomen." : "Short niet gevonden");
+    }
+  };
+  try {
+    return await work(c, save);
+  } finally {
+    if (!released) await release(id, c.token);
+  }
 }
 
 /**
@@ -232,39 +269,37 @@ export async function saveStoryboard(id: number, raw: unknown, sceneMap?: unknow
   } catch (err) {
     throw new AiError((err as Error).message);
   }
-  const short = await claim(id);
-  const old = short.assets.scenes;
-  const map =
-    Array.isArray(sceneMap) && sceneMap.length === storyboard.scenes.length
-      ? sceneMap.map((j) => (Number.isInteger(j) && j >= 0 && j < old.length ? Number(j) : -1))
-      : storyboard.scenes.map((_, i) => (i < old.length ? i : -1));
-  // an old scene can only be used once
-  const seen = new Set<number>();
-  const assets: ShortAssets = {
-    scenes: map.map((j) => {
-      if (j < 0 || seen.has(j)) return emptySceneAssets();
-      seen.add(j);
-      return old[j];
-    }),
-  };
-  await deleteSceneFiles(old.filter((_, j) => !seen.has(j)));
-  await release(id, { storyboard, assets });
+  await withClaim(id, async ({ short }, save) => {
+    const old = short.assets.scenes;
+    const map =
+      Array.isArray(sceneMap) && sceneMap.length === storyboard.scenes.length
+        ? sceneMap.map((j) => (Number.isInteger(j) && j >= 0 && j < old.length ? Number(j) : -1))
+        : storyboard.scenes.map((_, i) => (i < old.length ? i : -1));
+    // an old scene can only be used once
+    const seen = new Set<number>();
+    const assets: ShortAssets = {
+      scenes: map.map((j) => {
+        if (j < 0 || seen.has(j)) return emptySceneAssets();
+        seen.add(j);
+        return old[j];
+      }),
+    };
+    await save({ storyboard, assets });
+    // only once saved: until then the short still refers to these files
+    await deleteSceneFiles(old.filter((_, j) => !seen.has(j)));
+  });
   return (await getShort(id))!;
 }
 
 /** write a new script (keeps nothing of the old scenes) */
 export async function rewriteScript(id: number): Promise<Short> {
-  const short = await claim(id);
-  try {
+  await withClaim(id, async ({ short }, save) => {
     const [post] = await getDb().select().from(posts).where(eq(posts.id, short.postId));
     if (!post) throw new AiError("Blog niet gevonden");
     const storyboard = await writeScript(post);
+    await save({ storyboard, assets: alignAssets(storyboard, null), error: null });
     await deleteSceneFiles(short.assets.scenes);
-    await release(id, { storyboard, assets: alignAssets(storyboard, null), error: null });
-  } catch (err) {
-    await release(id);
-    throw err;
-  }
+  });
   return (await getShort(id))!;
 }
 
@@ -426,11 +461,10 @@ export interface GenerateOptions {
 
 /** make the missing or outdated illustrations and voices */
 export async function generateShortAssets(id: number, opts: GenerateOptions = {}): Promise<Short> {
-  const short = await claim(id);
-  const { storyboard, locale } = short;
-  const assets: ShortAssets = alignAssets(storyboard, short.assets);
   const part = opts.part ?? "all";
-  try {
+  await withClaim(id, async ({ short }, save) => {
+    const { storyboard, locale } = short;
+    const assets: ShortAssets = alignAssets(storyboard, short.assets);
     const jobs: { index: number; kind: "image" | "voice" }[] = [];
     storyboard.scenes.forEach((scene, index) => {
       if (opts.scene !== undefined && opts.scene !== index) return;
@@ -439,7 +473,8 @@ export async function generateShortAssets(id: number, opts: GenerateOptions = {}
       if ((part === "all" || part === "voice") && (opts.force || !st.voiceReady)) jobs.push({ index, kind: "voice" });
     });
 
-    const old: SceneAssets[] = [];
+    const replaced: SceneAssets[] = []; // files the new ones replace: delete once saved
+    const created: SceneAssets[] = []; // files written by this job: delete when it can't save
     let failure: unknown = null;
     await mapLimit(jobs, PARALLEL, async ({ index, kind }) => {
       if (failure) return;
@@ -448,30 +483,32 @@ export async function generateShortAssets(id: number, opts: GenerateOptions = {}
       try {
         if (kind === "image") {
           const key = await makeImage(id, index, scene.imagePrompt, storyboard.character);
-          old.push({ ...emptySceneAssets(), imageKey: current.imageKey });
+          created.push({ ...emptySceneAssets(), imageKey: key });
+          replaced.push({ ...emptySceneAssets(), imageKey: current.imageKey });
           assets.scenes[index] = { ...assets.scenes[index], imageKey: key, imagePrompt: scene.imagePrompt };
         } else {
           const v = await makeVoice(id, index, scene.narration, locale);
-          old.push({ ...emptySceneAssets(), audioKey: current.audioKey });
+          created.push({ ...emptySceneAssets(), audioKey: v.key });
+          replaced.push({ ...emptySceneAssets(), audioKey: current.audioKey });
           assets.scenes[index] = { ...assets.scenes[index], audioKey: v.key, narration: scene.narration, seconds: v.seconds, words: v.words };
         }
       } catch (err) {
         failure ??= err;
       }
     });
-    // keep everything that did succeed, even when one job failed
-    const stillThere = await release(id, { assets, error: failure ? (failure as Error).message : null });
-    await deleteSceneFiles(old);
-    if (!stillThere) {
-      // deleted meanwhile (only possible after the lock went stale): don't leave the new files behind
-      await deleteSceneFiles(assets.scenes);
-      throw new AiError("Short niet gevonden");
+
+    // keep everything that did succeed, even when one job failed (saving releases the claim, once)
+    try {
+      await save({ assets, error: failure ? (failure as Error).message : null });
+    } catch (err) {
+      // deleted or taken over meanwhile (only possible after the lock went stale):
+      // nothing refers to the new files, and the old ones may still be in use
+      await deleteSceneFiles(created);
+      throw err;
     }
+    await deleteSceneFiles(replaced);
     if (failure) throw failure;
-  } catch (err) {
-    await release(id);
-    throw err;
-  }
+  });
   return (await getShort(id))!;
 }
 
