@@ -246,14 +246,24 @@ export async function ttsChunk(text: string, locale: Locale, model: string, voic
 export async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const results = new Array<R>(items.length);
   let next = 0;
+  let failed = false;
+  let failure: unknown;
   await Promise.all(
     Array.from({ length: Math.min(limit, items.length) }, async () => {
-      while (next < items.length) {
+      while (!failed && next < items.length) {
         const i = next++;
-        results[i] = await fn(items[i]);
+        try {
+          results[i] = await fn(items[i]);
+        } catch (err) {
+          if (!failed) {
+            failed = true;
+            failure = err;
+          }
+        }
       }
     }),
   );
+  if (failed) throw failure;
   return results;
 }
 
@@ -307,7 +317,7 @@ export async function generatePostAudio(postId: number): Promise<{ key: string; 
 
     const key = `audio-${post.id}-${randomBytes(4).toString("hex")}`;
     await writeFile(audioFile(key), data);
-    await db
+    const saved = await db
       .update(posts)
       .set({
         audioKey: key,
@@ -317,7 +327,13 @@ export async function generatePostAudio(postId: number): Promise<{ key: string; 
         audioCreatedAt: new Date(),
         audioBusySince: null,
       })
-      .where(eq(posts.id, postId));
+      .where(eq(posts.id, postId))
+      .returning({ id: posts.id });
+    if (saved.length === 0) {
+      // the post was deleted meanwhile (only possible after the lock went stale): don't leave the file behind
+      await deleteAudioFile(key);
+      throw new AiError("Post niet gevonden");
+    }
     await deleteAudioFile(post.audioKey);
 
     // the TTS endpoint reports no token usage: store an estimate (text ~4 chars per token,
@@ -342,11 +358,16 @@ export async function generatePostAudio(postId: number): Promise<{ key: string; 
   }
 }
 
+/** true while a voice-over job holds the lock (a lock older than BUSY_MS is stale) */
+export function audioBusy(since: Date | null): boolean {
+  return Boolean(since && since.getTime() > Date.now() - BUSY_MS);
+}
+
 export async function removePostAudio(postId: number): Promise<void> {
   const db = getDb();
   const [post] = await db.select().from(posts).where(eq(posts.id, postId));
   if (!post) return;
-  if (post.audioBusySince && post.audioBusySince.getTime() > Date.now() - BUSY_MS) {
+  if (audioBusy(post.audioBusySince)) {
     throw new AiError("Er wordt nu een voorlezing gemaakt. Wacht tot die klaar is.");
   }
   await db

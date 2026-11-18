@@ -205,11 +205,19 @@ async function claim(id: number): Promise<Short> {
   throw new AiError("Er wordt al aan deze short gewerkt. Wacht tot dat klaar is.");
 }
 
-async function release(id: number, fields: Partial<typeof shorts.$inferInsert> = {}) {
-  await getDb()
+/** true while a job holds the lock (a lock older than BUSY_MS is stale) */
+export function shortBusy(since: Date | null): boolean {
+  return Boolean(since && since.getTime() > Date.now() - BUSY_MS);
+}
+
+/** clears the lock (and saves `fields`); false when the short no longer exists */
+async function release(id: number, fields: Partial<typeof shorts.$inferInsert> = {}): Promise<boolean> {
+  const rows = await getDb()
     .update(shorts)
     .set({ ...fields, busySince: null, updatedAt: new Date() })
-    .where(eq(shorts.id, id));
+    .where(eq(shorts.id, id))
+    .returning({ id: shorts.id });
+  return rows.length > 0;
 }
 
 /**
@@ -260,19 +268,24 @@ export async function rewriteScript(id: number): Promise<Short> {
   return (await getShort(id))!;
 }
 
+/**
+ * Refused while a job runs. The row lock makes check and delete atomic: a job claiming at
+ * the same moment is either seen here or waits and then finds no row.
+ */
 export async function deleteShort(id: number): Promise<void> {
-  const short = await getShort(id);
-  if (!short) return;
-  if (short.busySince && short.busySince.getTime() > Date.now() - BUSY_MS) {
-    throw new AiError("Er wordt nu aan deze short gewerkt. Wacht tot dat klaar is.");
-  }
-  await getDb().delete(shorts).where(eq(shorts.id, id));
-  await deleteSceneFiles(short.assets.scenes);
+  const short = await getDb().transaction(async (tx) => {
+    const [row] = await tx.select().from(shorts).where(eq(shorts.id, id)).for("update");
+    if (!row) return null;
+    if (shortBusy(row.busySince)) throw new AiError("Er wordt nu aan deze short gewerkt. Wacht tot dat klaar is.");
+    await tx.delete(shorts).where(eq(shorts.id, id));
+    return row;
+  });
+  if (short) await deleteSceneFiles(short.assets.scenes);
 }
 
-/** remove the files of all shorts of a post (call before the post is deleted) */
-export async function deleteShortFilesForPost(postId: number): Promise<void> {
-  for (const s of await listShortsForPost(postId)) await deleteSceneFiles(s.assets.scenes);
+/** remove the files of these shorts (after their rows are deleted, e.g. with their post) */
+export async function deleteShortFiles(rows: Pick<Short, "assets">[]): Promise<void> {
+  for (const s of rows) await deleteSceneFiles(s.assets.scenes);
 }
 
 async function deleteImageFile(key: string | null) {
@@ -447,8 +460,13 @@ export async function generateShortAssets(id: number, opts: GenerateOptions = {}
       }
     });
     // keep everything that did succeed, even when one job failed
-    await release(id, { assets, error: failure ? (failure as Error).message : null });
+    const stillThere = await release(id, { assets, error: failure ? (failure as Error).message : null });
     await deleteSceneFiles(old);
+    if (!stillThere) {
+      // deleted meanwhile (only possible after the lock went stale): don't leave the new files behind
+      await deleteSceneFiles(assets.scenes);
+      throw new AiError("Short niet gevonden");
+    }
     if (failure) throw failure;
   } catch (err) {
     await release(id);

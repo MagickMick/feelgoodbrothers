@@ -11,6 +11,7 @@ import {
   postCategories,
   posts,
   redirects,
+  shorts,
   type Locale,
   type PostKind,
   type PostStatus,
@@ -20,8 +21,8 @@ import { slugify } from "./text.ts";
 import { deleteImageFiles, processImage } from "./storage.ts";
 import { countPlaceholders } from "./ai/prompts.ts";
 import { notifyContentChanged } from "./notify.ts";
-import { deleteAudioFile } from "./ai/speech.ts";
-import { deleteShortFilesForPost } from "./shorts/service.ts";
+import { audioBusy, deleteAudioFile } from "./ai/speech.ts";
+import { deleteShortFiles, shortBusy } from "./shorts/service.ts";
 
 export class ValidationError extends Error {
   constructor(public fields: Record<string, string>) {
@@ -220,12 +221,31 @@ export async function savePost(id: number | null, raw: PostInput): Promise<numbe
   return postId;
 }
 
+/**
+ * Delete a post. Refused while AI work on it is running: that job would otherwise write
+ * its files after this cleanup, leaving them orphaned. The row lock (FOR UPDATE) makes the
+ * check atomic with the delete: a job that claims at the same moment either is seen here,
+ * or waits for this transaction and then finds no row.
+ */
 export async function deletePost(id: number): Promise<void> {
   const db = getDb();
-  const [old] = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
+  const old = await db.transaction(async (tx) => {
+    const [row] = await tx.select().from(posts).where(eq(posts.id, id)).for("update");
+    if (!row) return null;
+    if (audioBusy(row.audioBusySince)) {
+      throw new ValidationError({ delete: "Er wordt nu een voorlezing gemaakt voor deze blog. Wacht tot die klaar is en verwijder dan opnieuw." });
+    }
+    // the shorts rows go with the post (cascade); lock them too, so no short job can start or be running
+    const shortRows = await tx.select().from(shorts).where(eq(shorts.postId, id)).for("update");
+    if (shortRows.some((s) => shortBusy(s.busySince))) {
+      throw new ValidationError({ delete: "Er worden nu beelden of stem gemaakt voor een short van deze blog. Wacht tot dat klaar is en verwijder dan opnieuw." });
+    }
+    await tx.delete(posts).where(eq(posts.id, id));
+    return { ...row, shortRows };
+  });
   if (!old) return;
-  await deleteShortFilesForPost(id); // rows go with the post (cascade), files not
-  await db.delete(posts).where(eq(posts.id, id));
+  // files only after the commit: a rollback must not leave a post without its files
+  await deleteShortFiles(old.shortRows);
   await deleteAudioFile(old.audioKey);
   if (isLive(old.status, old.publishAt)) void notifyContentChanged(affectedPaths(old.locale, old.slug));
 }

@@ -52,7 +52,7 @@ const total = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0
     <button
       type="button"
       class="ap-speed primary-focus shrink-0 rounded-full border border-gray-400/50 px-2 py-1 text-xs tabular-nums opacity-80 hover:opacity-100"
-      aria-label={t("listen_speed")}
+      aria-description={t("listen_speed")}
       title={t("listen_speed")}>1×</button
     >
   </div>
@@ -63,7 +63,15 @@ const total = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0
   const SPEEDS = [1, 1.25, 1.5, 0.75];
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-  document.querySelectorAll<HTMLElement>(".audio-player").forEach((root) => {
+  // With the ClientRouter (view transitions) this module runs only once, while every
+  // navigation swaps in new player markup. So set up on each astro:page-load, and mark
+  // each player so it is never wired twice.
+  function setupPlayers() {
+    document.querySelectorAll<HTMLElement>(".audio-player:not([data-ready])").forEach(setupPlayer);
+  }
+
+  function setupPlayer(root: HTMLElement) {
+    root.dataset.ready = "";
     const audio = root.querySelector("audio")!;
     const toggle = root.querySelector<HTMLButtonElement>(".ap-toggle")!;
     const seek = root.querySelector<HTMLInputElement>(".ap-seek")!;
@@ -118,5 +126,8 @@ const total = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0
       audio.playbackRate = next;
       speed.textContent = `${next}×`;
     });
-  });
+  }
+
+  document.addEventListener("astro:page-load", setupPlayers);
+  setupPlayers(); // also covers pages without the ClientRouter
 </script>
