@@ -73,6 +73,13 @@ export const textTranslations = {
     disclaimer_title: "Not medical advice",
     disclaimer_text:
       "This is a personal experience, not professional advice. Do you recognize yourself in this story? It can really help to talk to your doctor or a mental health professional. You don't have to figure it out on your own.",
+    cookie_title: "Cookies",
+    cookie_text:
+      "May we use analytics cookies (Google Analytics)? They show us how many people visit and which stories are read. Only with your permission, and never for ads.",
+    cookie_accept: "Accept",
+    cookie_decline: "Decline",
+    cookie_settings: "Cookie settings",
+    privacy: "Privacy policy",
   },
   nl: {
     hero_description:
@@ -100,6 +107,13 @@ export const textTranslations = {
     disclaimer_title: "Geen medisch advies",
     disclaimer_text:
       "Dit is een persoonlijke ervaring, geen professioneel advies. Herken je jezelf in dit verhaal? Dan kan het goed zijn om professionele hulp te zoeken, bijvoorbeeld via je huisarts. Je hoeft het niet alleen uit te zoeken.",
+    cookie_title: "Cookies",
+    cookie_text:
+      "Mogen we analytische cookies (Google Analytics) gebruiken? Zo zien we hoeveel mensen langskomen en welke verhalen gelezen worden. Alleen met jouw toestemming, en nooit voor advertenties.",
+    cookie_accept: "Accepteren",
+    cookie_decline: "Weigeren",
+    cookie_settings: "Cookie-instellingen",
+    privacy: "Privacyverklaring",
   },
 } as const;
 

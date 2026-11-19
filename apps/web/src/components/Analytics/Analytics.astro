@@ -1,0 +1,239 @@
+---
+/**
+ * Cookie banner + Google Analytics 4, consent first (Consent Mode "basic"):
+ * nothing of Google loads until the visitor clicks "Accept". The choice is kept for 12 months
+ * in the first-party cookie "fgb_consent"; "Cookie settings" in the footer opens the banner again.
+ *
+ * Page views are sent by this script (on load and on every ClientRouter navigation), so in GA
+ * "Page changes based on browser history events" (enhanced measurement) must be off.
+ * Other components send events with:
+ *   window.dispatchEvent(new CustomEvent("fgb:track", { detail: { name: "audio_play" } }))
+ *
+ * Renders nothing when GA_MEASUREMENT_ID is empty.
+ */
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { useTranslations } from "@js/translationUtils";
+import { gaMeasurementId, privacyPath } from "@/lib/analytics";
+
+const id = gaMeasurementId();
+const locale = getLocaleFromUrl(Astro.url);
+const t = useTranslations(locale);
+const button =
+  "primary-focus rounded-md border border-primary-500 px-5 py-2 text-sm font-medium transition hover:bg-primary-500 hover:text-white";
+---
+
+{
+  id && (
+    <div
+      id="cookie-banner"
+      data-ga-id={id}
+      class="fixed inset-x-4 bottom-4 z-50 hidden justify-center"
+      role="dialog"
+      aria-label={t("cookie_title")}
+    >
+      <div class="flex max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-3 rounded-lg border border-primary-300 bg-base-50 p-4 shadow-lg">
+        <p class="text-center text-sm lg:text-base">
+          {t("cookie_text")}{" "}
+          <a href={privacyPath(locale)} class="underline decoration-primary-500 transition hover:text-primary-500">
+            {t("privacy")}
+          </a>
+        </p>
+        <div class="flex gap-2">
+          <button type="button" class={button} data-consent="granted">
+            {t("cookie_accept")}
+          </button>
+          <button type="button" class={button} data-consent="denied">
+            {t("cookie_decline")}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+<script>
+  type Params = Record<string, string | number>;
+  type Consent = "granted" | "denied";
+
+  const COOKIE = "fgb_consent";
+  const YEAR = 60 * 60 * 24 * 365;
+
+  const w = window as unknown as Window & { dataLayer: unknown[] } & Record<string, unknown>;
+  let loadedId: string | null = null;
+  let lastViewHref: string | null = null;
+  let previousHref: string | null = null;
+  let stopReadTracking: (() => void) | null = null;
+
+  const banner = () => document.getElementById("cookie-banner");
+  const gaId = () => banner()?.dataset.gaId ?? null;
+
+  function readConsent(): Consent | null {
+    const m = document.cookie.match(/(?:^|;\s*)fgb_consent=(granted|denied)/);
+    return m ? (m[1] as Consent) : null;
+  }
+
+  function writeConsent(value: Consent) {
+    const secure = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${COOKIE}=${value}; max-age=${YEAR}; path=/; SameSite=Lax${secure}`;
+  }
+
+  function showBanner(show: boolean) {
+    const el = banner();
+    el?.classList.toggle("hidden", !show);
+    el?.classList.toggle("flex", show);
+  }
+
+  // the official gtag snippet: it must push the `arguments` object itself
+  function gtag(..._args: unknown[]) {
+    // eslint-disable-next-line prefer-rest-params
+    w.dataLayer.push(arguments);
+  }
+
+  /** load gtag.js once; only ever called after consent */
+  function startGa(id: string) {
+    w[`ga-disable-${id}`] = false;
+    if (loadedId) {
+      gtag("consent", "update", { analytics_storage: "granted" });
+      return;
+    }
+    loadedId = id;
+    w.dataLayer = w.dataLayer || [];
+    gtag("consent", "default", {
+      ad_storage: "denied",
+      ad_user_data: "denied",
+      ad_personalization: "denied",
+      analytics_storage: "denied",
+    });
+    gtag("consent", "update", { analytics_storage: "granted" });
+    // page views are sent by pageView(); the Google tag ignores send_page_view in "config"
+    // alone (it then sends its own page_view too, so every view counted twice)
+    gtag("set", { send_page_view: false });
+    gtag("js", new Date());
+    gtag("config", id, {
+      send_page_view: false,
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false,
+      cookie_expires: YEAR, // 1 year instead of Google's default 2 years
+    });
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`;
+    document.head.appendChild(s);
+  }
+
+  /** stop GA and remove its cookies (after "Decline", also when accepted earlier) */
+  function stopGa(id: string) {
+    w[`ga-disable-${id}`] = true;
+    if (loadedId) gtag("consent", "update", { analytics_storage: "denied" });
+    const host = location.hostname;
+    const domains = ["", host, `.${host}`, `.${host.split(".").slice(-2).join(".")}`];
+    for (const c of document.cookie.split(";")) {
+      const name = c.split("=")[0].trim();
+      if (!name.startsWith("_ga")) continue;
+      for (const d of domains) {
+        document.cookie = `${name}=; max-age=0; path=/${d ? `; domain=${d}` : ""}`;
+      }
+    }
+  }
+
+  const active = () => loadedId !== null && readConsent() === "granted";
+
+  /** the post being read, for the event parameters */
+  function postParams(): Params {
+    const el = document.querySelector<HTMLElement>("[data-analytics-post]");
+    return el ? { post_slug: el.dataset.analyticsPost ?? "", content_locale: el.dataset.analyticsLocale ?? "" } : {};
+  }
+
+  function track(name: string, params: Params = {}) {
+    if (active()) gtag("event", name, { ...postParams(), ...params });
+  }
+
+  function pageView() {
+    if (!active() || lastViewHref === location.href) return;
+    gtag("event", "page_view", {
+      page_location: location.href,
+      page_title: document.title,
+      ...(previousHref ? { page_referrer: previousHref } : {}),
+    });
+    lastViewHref = location.href;
+  }
+
+  /** "blog_read": 75% of the article scrolled into view, once per page view */
+  function startReadTracking() {
+    stopReadTracking?.();
+    stopReadTracking = null;
+    const el = document.querySelector<HTMLElement>("[data-analytics-post]");
+    if (!el || el.dataset.analyticsReadTracked) return;
+    let ticking = false;
+    const check = () => {
+      ticking = false;
+      const r = el.getBoundingClientRect();
+      if (r.height > 0 && window.innerHeight - r.top >= r.height * 0.75 && active() && !el.dataset.analyticsReadTracked) {
+        el.dataset.analyticsReadTracked = "true";
+        track("blog_read");
+        stop();
+      }
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(check);
+      }
+    };
+    const stop = () => {
+      window.removeEventListener("scroll", onScroll);
+      stopReadTracking = null;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    stopReadTracking = stop;
+    check();
+  }
+
+  /** runs on the first load and after every ClientRouter navigation (deduplicated by URL) */
+  function onPage() {
+    const id = gaId();
+    if (!id) return;
+    if (lastViewHref !== location.href) {
+      if (lastViewHref) previousHref = lastViewHref;
+    }
+    const consent = readConsent();
+    showBanner(consent === null);
+    if (consent === "granted") {
+      startGa(id);
+      pageView();
+    }
+    startReadTracking();
+  }
+
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement | null;
+    const choice = target?.closest<HTMLElement>("[data-consent]");
+    if (choice) {
+      const id = gaId();
+      if (!id) return;
+      const value = choice.dataset.consent as Consent;
+      writeConsent(value);
+      showBanner(false);
+      if (value === "granted") {
+        startGa(id);
+        pageView();
+        startReadTracking();
+      } else {
+        stopGa(id);
+      }
+      return;
+    }
+    if (target?.closest("[data-cookie-settings]")) {
+      e.preventDefault();
+      showBanner(true);
+    }
+  });
+
+  window.addEventListener("fgb:track", (e) => {
+    const detail = (e as CustomEvent<{ name: string; params?: Params }>).detail;
+    if (detail?.name) track(detail.name, detail.params);
+  });
+
+  document.addEventListener("astro:page-load", onPage);
+  onPage(); // also covers pages without the ClientRouter
+</script>

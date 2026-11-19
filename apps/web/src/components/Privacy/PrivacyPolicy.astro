@@ -1,0 +1,231 @@
+---
+/**
+ * Privacy policy text (EN + NL). DRAFT written for Feelgood Brothers: have it checked before
+ * relying on it. Keep it in line with what the site really does (Analytics.astro, Disqus in
+ * BlogLayoutCenter.astro, Fontshare in BaseHead.astro, Cloudflare, the VPS).
+ */
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  locale: "en" | "nl";
+}
+
+const { locale } = Astro.props;
+const updated = locale === "nl" ? "18 november 2026" : "18 November 2026";
+const settingsButton = "underline decoration-primary-500 transition hover:text-primary-500";
+---
+
+<section class="site-container mx-auto pt-36 md:pt-44">
+  <h1 class="h1 text-center">
+    <span class="relative whitespace-nowrap">
+      {locale === "nl" ? "Privacy" : "Privacy"}
+      <span>
+        <Icon
+          name="stellar/freehand-zig-underline"
+          class="absolute left-0 top-0 -z-10 h-full w-full translate-y-[60%] scale-y-75 text-primary-300"
+          aria-hidden="true"
+        />
+      </span>
+    </span>
+  </h1>
+
+  <div class="prose mx-auto mt-10 max-w-2xl md:mt-20 md:text-lg">
+    {
+      locale === "nl" ? (
+        <>
+          <p><em>Laatst bijgewerkt: {updated}</em></p>
+          <p>
+            Feelgood Brothers is een blog van drie broers over mentale gezondheid. We vinden jouw privacy belangrijk en
+            verzamelen zo weinig mogelijk. Op deze pagina lees je welke gegevens we gebruiken, waarom, en wat je
+            rechten zijn.
+          </p>
+
+          <h2>Wie zijn wij</h2>
+          <p>
+            Feelgood Brothers (feelgoodbrothers.com) is verantwoordelijk voor de verwerking van je gegevens op deze
+            site. Vragen? Mail ons via <a href="mailto:info@feelgoodbrothers.com">info@feelgoodbrothers.com</a>.
+          </p>
+
+          <h2>Google Analytics (alleen met jouw toestemming)</h2>
+          <p>
+            Als je in de cookiebanner op "Accepteren" klikt, gebruiken we Google Analytics 4 om te zien hoeveel mensen
+            de site bezoeken, welke verhalen gelezen worden en hoe bezoekers bij ons komen (bijvoorbeeld via Google,
+            YouTube of sociale media). Klik je op "Weigeren" of kies je niets, dan wordt Google Analytics niet geladen.
+          </p>
+          <ul>
+            <li>
+              <strong>Wat:</strong> de pagina's die je bekijkt, hoe je op de site kwam, of je een verhaal grotendeels
+              hebt gelezen of de voorlezing hebt gestart, je apparaat en browser, en je land of regio (afgeleid van je
+              IP-adres; Google Analytics 4 slaat je IP-adres zelf niet op).
+            </li>
+            <li>
+              <strong>Cookies:</strong> <code>_ga</code> en <code>_ga_…</code>, maximaal 1 jaar.
+            </li>
+            <li>
+              <strong>Niet:</strong> we gebruiken de gegevens niet voor advertenties. Google Signals en het
+              personaliseren van advertenties staan uit.
+            </li>
+            <li>
+              <strong>Bewaartermijn:</strong> 14 maanden, daarna verwijdert Google de gegevens.
+            </li>
+            <li>
+              <strong>Wie:</strong> Google Ireland Ltd. verwerkt de gegevens voor ons. Gegevens kunnen in de Verenigde
+              Staten terechtkomen; Google valt onder het EU-VS Data Privacy Framework.
+            </li>
+            <li>
+              <strong>Grondslag:</strong> jouw toestemming. Je kunt die altijd intrekken via{" "}
+              <button type="button" data-cookie-settings class={settingsButton}>Cookie-instellingen</button> (ook
+              onderaan elke pagina). We verwijderen dan de Google Analytics-cookies.
+            </li>
+          </ul>
+
+          <h2>Je cookiekeuze</h2>
+          <p>
+            We onthouden je keuze in de cookie <code>fgb_consent</code> (12 maanden), zodat we het niet bij elke pagina
+            opnieuw vragen. Daarna vragen we het opnieuw.
+          </p>
+
+          <h2>Reacties (Disqus)</h2>
+          <p>
+            Onder de verhalen kun je reageren via Disqus. Die reacties worden geladen als je naar het reactiegedeelte
+            scrolt. Disqus is een dienst van een ander bedrijf, dat daarbij eigen cookies kan plaatsen en gegevens kan
+            verwerken. Als je een reactie plaatst, gelden de voorwaarden en het{" "}
+            <a href="https://disqus.com/privacy-policy/" rel="noopener noreferrer" target="_blank">privacybeleid van Disqus</a>.
+          </p>
+
+          <h2>Lettertype, hosting en beveiliging</h2>
+          <ul>
+            <li>
+              <strong>Lettertype:</strong> het lettertype van de site komt van Fontshare. Je browser haalt het daar op,
+              waarbij Fontshare je IP-adres ziet.
+            </li>
+            <li>
+              <strong>Cloudflare:</strong> de site loopt via Cloudflare, voor snelheid en beveiliging (bijvoorbeeld
+              tegen aanvallen). Cloudflare verwerkt daarvoor je IP-adres en kan een beveiligingscookie plaatsen.
+            </li>
+            <li>
+              <strong>Server:</strong> onze server houdt technische logbestanden bij (zoals IP-adres en bezochte
+              pagina) om storingen en misbruik op te sporen. Die bewaren we kort.
+            </li>
+          </ul>
+          <p>De grondslag hiervoor is ons gerechtvaardigd belang: een snelle, veilige en werkende website.</p>
+
+          <h2>Als je ons mailt</h2>
+          <p>
+            Mail je ons (bijvoorbeeld via info@ of story@feelgoodbrothers.com), dan gebruiken we je e-mailadres en je
+            bericht alleen om te antwoorden. Deel je je verhaal met ons, dan publiceren we het alleen met jouw
+            toestemming en met een voornaam of pseudoniem. We bewaren je mail niet langer dan nodig.
+          </p>
+
+          <h2>Je rechten</h2>
+          <p>
+            Je mag ons vragen welke gegevens we van je hebben, en vragen om ze te verbeteren of te verwijderen. Mail
+            daarvoor naar <a href="mailto:info@feelgoodbrothers.com">info@feelgoodbrothers.com</a>. Ben je het niet
+            eens met hoe we met je gegevens omgaan, dan kun je een klacht indienen bij de{" "}
+            <a href="https://autoriteitpersoonsgegevens.nl" rel="noopener noreferrer" target="_blank">Autoriteit Persoonsgegevens</a>.
+          </p>
+
+          <h2>Wijzigingen</h2>
+          <p>Als we deze verklaring aanpassen, zie je dat aan de datum bovenaan.</p>
+        </>
+      ) : (
+        <>
+          <p><em>Last updated: {updated}</em></p>
+          <p>
+            Feelgood Brothers is a blog by three brothers about mental health. We care about your privacy and collect
+            as little as possible. This page explains which data we use, why, and what your rights are.
+          </p>
+
+          <h2>Who we are</h2>
+          <p>
+            Feelgood Brothers (feelgoodbrothers.com) is responsible for processing your data on this site. Questions?
+            Email us at <a href="mailto:info@feelgoodbrothers.com">info@feelgoodbrothers.com</a>.
+          </p>
+
+          <h2>Google Analytics (only with your permission)</h2>
+          <p>
+            If you click "Accept" in the cookie banner, we use Google Analytics 4 to see how many people visit the site,
+            which stories are read and how visitors find us (for example through Google, YouTube or social media). If
+            you click "Decline" or don't choose, Google Analytics is not loaded.
+          </p>
+          <ul>
+            <li>
+              <strong>What:</strong> the pages you view, how you arrived on the site, whether you read most of a story or
+              started the read-aloud audio, your device and browser, and your country or region (derived from your IP
+              address; Google Analytics 4 does not store your IP address itself).
+            </li>
+            <li>
+              <strong>Cookies:</strong> <code>_ga</code> and <code>_ga_…</code>, for at most 1 year.
+            </li>
+            <li>
+              <strong>Not:</strong> we don't use the data for advertising. Google Signals and ad personalization are
+              turned off.
+            </li>
+            <li>
+              <strong>Retention:</strong> 14 months, after which Google deletes the data.
+            </li>
+            <li>
+              <strong>Who:</strong> Google Ireland Ltd. processes the data on our behalf. Data may be transferred to the
+              United States; Google is certified under the EU-US Data Privacy Framework.
+            </li>
+            <li>
+              <strong>Legal basis:</strong> your consent. You can withdraw it at any time through{" "}
+              <button type="button" data-cookie-settings class={settingsButton}>Cookie settings</button> (also at the
+              bottom of every page). We then remove the Google Analytics cookies.
+            </li>
+          </ul>
+
+          <h2>Your cookie choice</h2>
+          <p>
+            We remember your choice in the cookie <code>fgb_consent</code> (12 months), so we don't ask on every page.
+            After that we ask again.
+          </p>
+
+          <h2>Comments (Disqus)</h2>
+          <p>
+            You can comment on stories through Disqus. The comments load when you scroll to the comment section. Disqus
+            is a service of another company, which may set its own cookies and process data when it loads. If you post
+            a comment, the terms and the{" "}
+            <a href="https://disqus.com/privacy-policy/" rel="noopener noreferrer" target="_blank">privacy policy of Disqus</a>{" "}
+            apply.
+          </p>
+
+          <h2>Font, hosting and security</h2>
+          <ul>
+            <li>
+              <strong>Font:</strong> the site's font comes from Fontshare. Your browser downloads it from there, which
+              means Fontshare sees your IP address.
+            </li>
+            <li>
+              <strong>Cloudflare:</strong> the site runs through Cloudflare for speed and security (for example against
+              attacks). For that, Cloudflare processes your IP address and may set a security cookie.
+            </li>
+            <li>
+              <strong>Server:</strong> our server keeps technical log files (such as IP address and page visited) to
+              detect outages and abuse. We keep them for a short time.
+            </li>
+          </ul>
+          <p>The legal basis for this is our legitimate interest: a fast, secure and working website.</p>
+
+          <h2>If you email us</h2>
+          <p>
+            If you email us (for example at info@ or story@feelgoodbrothers.com), we only use your email address and
+            message to reply. If you share your story with us, we only publish it with your permission and with a
+            first name or pseudonym. We don't keep your email longer than needed.
+          </p>
+
+          <h2>Your rights</h2>
+          <p>
+            You can ask us which data we have about you, and ask us to correct or delete it. Email{" "}
+            <a href="mailto:info@feelgoodbrothers.com">info@feelgoodbrothers.com</a>. If you disagree with how we handle
+            your data, you can file a complaint with your data protection authority (in the Netherlands the{" "}
+            <a href="https://autoriteitpersoonsgegevens.nl/en" rel="noopener noreferrer" target="_blank">Autoriteit Persoonsgegevens</a>).
+          </p>
+
+          <h2>Changes</h2>
+          <p>When we change this policy, you'll see it in the date at the top.</p>
+        </>
+      )
+    }
+  </div>
+</section>

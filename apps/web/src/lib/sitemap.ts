@@ -27,8 +27,7 @@ const STATIC_PAGES: Record<Locale, string>[] = [
   { en: "/blog/", nl: "/nl/blog/" },
   { en: "/about/", nl: "/nl/over-ons/" },
   { en: "/categories/", nl: "/nl/categorieen/" },
-  { en: "/privacy-policy/", nl: "/nl/privacy-policy/" },
-  { en: "/terms/", nl: "/nl/terms/" },
+  { en: "/privacy/", nl: "/nl/privacy/" },
 ];
 
 const xmlEscape = (s: string) =>

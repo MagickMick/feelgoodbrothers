@@ -68,6 +68,8 @@ services:
     environment:
       DATABASE_URL: postgres://fgb:fgb_local_dev@postgres:5432/feelgoodbrothers
       SITE_URL: http://localhost:4321
+      # set to test the cookie banner + Google Analytics locally (empty = no banner, no GA)
+      GA_MEASUREMENT_ID: ${GA_MEASUREMENT_ID:-}
     ports:
       - "4321:4321"
     volumes:

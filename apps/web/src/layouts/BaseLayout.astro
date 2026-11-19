@@ -3,6 +3,7 @@
 import BaseHead, { type Props as HeadProps } from "@layouts/BaseHead.astro";
 import Nav from "@components/Nav/Nav.astro";
 import Footer from "@components/Footer/Footer.astro";
+import Analytics from "@components/Analytics/Analytics.astro";
 
 // style import
 import "@/styles/global.scss";
@@ -36,6 +37,7 @@ const currLocale = getLocaleFromUrl(Astro.url);
       </main>
     </div>
     <Footer />
+    <Analytics />
 
     <!-- Scroll animations -->
     <script>
